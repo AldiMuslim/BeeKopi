@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('penerima_id')->nullable()->comment('Sales (Penerima)')->constrained('users')->onDelete('set null');
             $table->date('tanggal');
             $table->text('catatan')->nullable();
-            $table->enum('status', ['pending', 'diterima', 'ditolak'])->default('pending');
+            $table->enum('status', ['pending', 'dalam_transit', 'diterima', 'ditolak'])->default('pending');
             $table->timestamps();
         });
 

@@ -41,6 +41,9 @@
 
                     {{-- Menu Produksi / Gudang --}}
                     @if ($role === 'produksi')
+                        <x-nav-link :href="route('produksi.restock-lapak')" :active="request()->routeIs('produksi.restock-lapak')">
+                            Restock Lapak
+                        </x-nav-link>
                         <x-nav-link :href="route('produksi.bahan-baku')" :active="request()->routeIs('produksi.bahan-baku')">
                             Stok Bahan Baku
                         </x-nav-link>
@@ -155,6 +158,7 @@
             @endif
 
             @if ($role === 'produksi')
+                <x-responsive-nav-link :href="route('produksi.restock-lapak')" :active="request()->routeIs('produksi.restock-lapak')">Restock Lapak</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('produksi.bahan-baku')" :active="request()->routeIs('produksi.bahan-baku')">Stok Bahan Baku</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('produksi.racik-kopi')" :active="request()->routeIs('produksi.racik-kopi')">Racik Kopi Otomatis</x-responsive-nav-link>
             @endif
