@@ -1,0 +1,33 @@
+name: Run Pest Tests
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  laravel-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, pdo, pdo_sqlite, sqlite3
+        coverage: none
+
+    - name: Copy .env
+      run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+
+    - name: Install Dependencies
+      run: composer install --prefer-dist --no-interaction --no-progress
+
+    - name: Generate key
+      run: php artisan key:generate
+
+    - name: Execute Pest Tests
+      run: vendor/bin/pest
