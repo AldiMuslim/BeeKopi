@@ -56,7 +56,7 @@ test('user sales dapat mengakses halaman kasir pos', function () {
         ->assertStatus(200);
 });
 
-test('komponen kasir lapak dapat dirender dengan benar', function () {
+test('komponen kasir lapak dapat dirender dengan data produk', function () {
     Livewire::actingAs($this->userSales)
         ->test(KasirLapak::class)
         ->assertStatus(200)
