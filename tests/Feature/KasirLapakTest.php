@@ -14,9 +14,8 @@ use Livewire\Livewire;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    // 1. Sesuaikan field 'nama' => 'sales' sesuai pengecekan di routes/web.php
+    // 1. Buat role Sales menggunakan nama_role
     $this->roleSales = Role::firstOrCreate(
-        ['nama' => 'sales'],
         ['nama_role' => 'Sales']
     );
 
@@ -26,7 +25,7 @@ beforeEach(function () {
         'alamat' => 'Jl. Sudirman No. 1',
     ]);
 
-    // 3. Tambahkan email_verified_at agar lolos dari middleware 'verified'
+    // 3. Buat user kasir sales dummy dengan email_verified_at
     $this->userSales = User::create([
         'name' => 'Kasir Sales',
         'email' => 'sales@beekopi.com',
@@ -54,16 +53,12 @@ beforeEach(function () {
 });
 
 test('user sales dapat mengakses halaman kasir pos', function () {
-    $this->withoutExceptionHandling();
-
     $this->actingAs($this->userSales)
         ->get(route('sales.kasir'))
         ->assertStatus(200);
 });
 
 test('kasir dapat menambahkan produk dan memproses transaksi', function () {
-    $this->withoutExceptionHandling();
-
     Livewire::actingAs($this->userSales)
         ->test(KasirLapak::class)
         ->call('tambahKeranjang', $this->produk->id)
