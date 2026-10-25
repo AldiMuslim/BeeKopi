@@ -2,12 +2,13 @@
 
 namespace App\Livewire\Produksi;
 
+use App\Models\AuditLog;
 use App\Models\BahanBaku;
 use App\Models\Produk;
 use App\Models\Resep;
+use App\Models\RiwayatBahanBaku;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
-use App\Models\RiwayatBahanBaku;
 
 class RacikKopi extends Component
 {
@@ -202,13 +203,27 @@ class RacikKopi extends Component
         ]);
 
         DB::transaction(function () {
+            // Kalkulasi HPP otomatis dari harga satuan bahan baku
+            $calculatedHpp = 0;
+            foreach ($this->komposisi as $item) {
+                $bahan = BahanBaku::find($item['bahan_baku_id']);
+                if ($bahan && $bahan->harga_satuan > 0) {
+                    $takaranDalamSatuanBahan = $this->konversiNilaiStok(
+                        (float) $item['takaran_per_cup'],
+                        $item['satuan'],
+                        $bahan->satuan
+                    );
+                    $calculatedHpp += ($takaranDalamSatuanBahan * $bahan->harga_satuan);
+                }
+            }
+
             $produk = Produk::updateOrCreate(
                 ['id' => $this->selected_produk_id],
                 [
                     'nama_produk' => $this->nama_produk,
                     'kategori' => $this->kategori,
                     'harga_jual' => $this->harga_jual,
-                    'hpp' => $this->hpp ?? 0,
+                    'hpp' => $calculatedHpp,
                     'status' => 'aktif',
                 ]
             );
@@ -223,6 +238,11 @@ class RacikKopi extends Component
                     'satuan' => $item['satuan'],
                 ]);
             }
+
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'aktivitas' => $this->isEditMode ? "Memperbarui resep varian: {$produk->nama_produk}" : "Menambah varian resep baru: {$produk->nama_produk}",
+            ]);
         });
 
         session()->flash('message', $this->isEditMode ? 'Varian & resep berhasil diperbarui!' : 'Varian produk & resep baru berhasil ditambahkan!');
@@ -230,61 +250,66 @@ class RacikKopi extends Component
     }
 
     public function prosesRacik()
-{
-    $this->validate([
-        'produk_id' => 'required|exists:produks,id',
-        'jumlah_cup' => 'required|integer|min:1',
-    ]);
+    {
+        $this->validate([
+            'produk_id' => 'required|exists:produks,id',
+            'jumlah_cup' => 'required|integer|min:1',
+        ]);
 
-    $this->hitungPreviewBahan();
+        $this->hitungPreviewBahan();
 
-    if (!$this->stokCukup) {
-        session()->flash('error', 'Gagal meracik! Stok beberapa bahan baku tidak mencukupi.');
-        return;
-    }
-
-    DB::transaction(function () {
-        $produk = Produk::findOrFail($this->produk_id);
-        $reseps = Resep::with('bahanBaku')->where('produk_id', $this->produk_id)->get();
-
-        foreach ($reseps as $resep) {
-            $bahan = $resep->bahanBaku;
-            if (!$bahan) continue;
-
-            $kebutuhanResep = $resep->takaran_per_cup * $this->jumlah_cup;
-
-            // Konversi kebutuhan ke satuan yang tersimpan di tabel bahan_bakus
-            $potongStokBahan = $this->konversiNilaiStok(
-                $kebutuhanResep,
-                $resep->satuan,
-                $bahan->satuan
-            );
-
-            // 1. Potong Stok Bahan Baku Mentah
-            BahanBaku::where('id', $bahan->id)->decrement('stok_sekarang', $potongStokBahan);
-
-            // 2. Catat Log Pemakaian Otomatis (Auto-Log Stock Out)
-            RiwayatBahanBaku::create([
-                'bahan_baku_id' => $bahan->id,
-                'user_id' => auth()->id(),
-                'jenis' => 'keluar',
-                'jumlah' => $potongStokBahan,
-                'satuan' => $bahan->satuan,
-                'total_biaya' => 0,
-                'keterangan' => "Peracikan {$this->jumlah_cup} Cup {$produk->nama_produk}",
-            ]);
+        if (!$this->stokCukup) {
+            session()->flash('error', 'Gagal meracik! Stok beberapa bahan baku tidak mencukupi.');
+            return;
         }
 
-        // 3. Tambah Stok Produk Siap Jual di Gudang Pusat
-        $produk->increment('stok_pusat', $this->jumlah_cup);
-    });
+        DB::transaction(function () {
+            $produk = Produk::findOrFail($this->produk_id);
+            $reseps = Resep::with('bahanBaku')->where('produk_id', $this->produk_id)->get();
 
-    $produk = Produk::find($this->produk_id);
-    session()->flash('message', "Berhasil meracik {$this->jumlah_cup} cup {$produk->nama_produk}! Stok produk bertambah, bahan baku terpotong, dan log pemakaian tercatat.");
+            foreach ($reseps as $resep) {
+                $bahan = $resep->bahanBaku;
+                if (!$bahan) continue;
 
-    $this->reset(['produk_id', 'jumlah_cup', 'previewBahan']);
-    $this->jumlah_cup = 1;
-}
+                $kebutuhanResep = $resep->takaran_per_cup * $this->jumlah_cup;
+
+                // Konversi kebutuhan ke satuan yang tersimpan di tabel bahan_bakus
+                $potongStokBahan = $this->konversiNilaiStok(
+                    $kebutuhanResep,
+                    $resep->satuan,
+                    $bahan->satuan
+                );
+
+                // 1. Potong Stok Bahan Baku Mentah
+                BahanBaku::where('id', $bahan->id)->decrement('stok_sekarang', $potongStokBahan);
+
+                // 2. Catat Log Pemakaian Otomatis (Auto-Log Stock Out)
+                RiwayatBahanBaku::create([
+                    'bahan_baku_id' => $bahan->id,
+                    'user_id' => auth()->id(),
+                    'jenis' => 'keluar',
+                    'jumlah' => $potongStokBahan,
+                    'satuan' => $bahan->satuan,
+                    'total_biaya' => 0,
+                    'keterangan' => "Peracikan {$this->jumlah_cup} Cup {$produk->nama_produk}",
+                ]);
+            }
+
+            // 3. Tambah Stok Produk Siap Jual di Gudang Pusat
+            $produk->increment('stok_pusat', $this->jumlah_cup);
+
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'aktivitas' => "Meracik batch produk: {$this->jumlah_cup} Cup {$produk->nama_produk}",
+            ]);
+        });
+
+        $produk = Produk::find($this->produk_id);
+        session()->flash('message', "Berhasil meracik {$this->jumlah_cup} cup {$produk->nama_produk}! Stok produk bertambah, bahan baku terpotong, dan log pemakaian tercatat.");
+
+        $this->reset(['produk_id', 'jumlah_cup', 'previewBahan']);
+        $this->jumlah_cup = 1;
+    }
 
     public function render()
     {
