@@ -14,7 +14,7 @@ use Livewire\Livewire;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    // 1. Buat role Sales hanya menggunakan kolom nama_role yang valid
+    // 1. Buat role Sales
     $this->roleSales = Role::firstOrCreate(
         ['nama_role' => 'Sales']
     );
@@ -25,15 +25,18 @@ beforeEach(function () {
         'alamat' => 'Jl. Sudirman No. 1',
     ]);
 
-    // 3. Buat user kasir sales dengan email_verified_at agar lolos dari middleware verified
+    // 3. Buat user dan paksa pengisian role_id serta lapak_id via forceFill
     $this->userSales = User::create([
         'name' => 'Kasir Sales',
         'email' => 'sales@beekopi.com',
         'email_verified_at' => now(),
         'password' => bcrypt('password'),
+    ]);
+
+    $this->userSales->forceFill([
         'role_id' => $this->roleSales->id,
         'lapak_id' => $this->lapak->id,
-    ]);
+    ])->save();
 
     // 4. Buat produk dummy
     $this->produk = Produk::create([
@@ -53,12 +56,16 @@ beforeEach(function () {
 });
 
 test('user sales dapat mengakses halaman kasir pos', function () {
+    $this->withoutExceptionHandling();
+
     $this->actingAs($this->userSales)
         ->get(route('sales.kasir'))
         ->assertStatus(200);
 });
 
 test('kasir dapat menambahkan produk dan memproses transaksi', function () {
+    $this->withoutExceptionHandling();
+
     Livewire::actingAs($this->userSales)
         ->test(KasirLapak::class)
         ->call('tambahKeranjang', $this->produk->id)
