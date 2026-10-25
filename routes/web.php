@@ -1,7 +1,9 @@
 <?php
-
+use App\Livewire\Admin\DashboardAdmin;
 use App\Livewire\Admin\KelolaLapak;
 use App\Livewire\Admin\KelolaUser;
+use App\Livewire\Admin\KelolaProduk;
+use App\Livewire\Admin\AuditLogIndex;
 use App\Livewire\Management\AlokasiStok;
 use App\Livewire\Management\VerifikasiLaporan;
 use App\Livewire\Produksi\KelolaBahanBaku;
@@ -69,8 +71,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Modul Admin
     Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('/dashboard', DashboardAdmin::class)->name('dashboard');
         Route::get('/users', KelolaUser::class)->name('users');
-        Route::get('/lapaks', KelolaLapak::class)->name('lapaks');
+        Route::get('/lapak', KelolaLapak::class)->name('lapak');
+        Route::get('/produk', KelolaProduk::class)->name('produk');
+        Route::get('/bahan-baku', KelolaBahanBaku::class)->name('bahan-baku');
+        Route::get('/audit-log', AuditLogIndex::class)->name('audit-log');
     });
 });
 

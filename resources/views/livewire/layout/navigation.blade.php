@@ -19,7 +19,7 @@
                             Kasir POS
                         </x-nav-link>
 
-                        <!-- Tombol Menonjol Laporan Penutupan di Navbar -->
+                        <!-- Tombol Laporan Penutupan -->
                         <div class="flex items-center">
                             <a href="{{ route('sales.laporan-penutupan') }}"
                                 class="inline-flex items-center px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-sm transition">
@@ -67,11 +67,23 @@
 
                     {{-- Menu Admin --}}
                     @if ($role === 'admin')
+                        <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.dashboard')">
+                            Dashboard
+                        </x-nav-link>
                         <x-nav-link :href="route('admin.users')" :active="request()->routeIs('admin.users')">
                             Kelola User
                         </x-nav-link>
-                        <x-nav-link :href="route('admin.lapaks')" :active="request()->routeIs('admin.lapaks')">
+                        <x-nav-link :href="route('admin.lapak')" :active="request()->routeIs('admin.lapak')">
                             Kelola Lapak
+                        </x-nav-link>
+                        <x-nav-link :href="route('admin.produk')" :active="request()->routeIs('admin.produk')">
+                            Produk & Resep
+                        </x-nav-link>
+                        <x-nav-link :href="route('admin.bahan-baku')" :active="request()->routeIs('admin.bahan-baku')">
+                            Master Bahan Baku
+                        </x-nav-link>
+                        <x-nav-link :href="route('admin.audit-log')" :active="request()->routeIs('admin.audit-log')">
+                            Audit Log
                         </x-nav-link>
                     @endif
                 </div>
@@ -143,23 +155,24 @@
             @endif
 
             @if ($role === 'produksi')
-                <x-responsive-nav-link :href="route('produksi.bahan-baku')" :active="request()->routeIs('produksi.bahan-baku')">
-                    Stok Bahan Baku
-                </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('produksi.racik-kopi')" :active="request()->routeIs('produksi.racik-kopi')">
-                    Racik Kopi Otomatis
-                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('produksi.bahan-baku')" :active="request()->routeIs('produksi.bahan-baku')">Stok Bahan Baku</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('produksi.racik-kopi')" :active="request()->routeIs('produksi.racik-kopi')">Racik Kopi Otomatis</x-responsive-nav-link>
             @endif
 
             @if ($role === 'management')
+                <x-responsive-nav-link :href="route('management.analisis-penjualan')" :active="request()->routeIs('management.analisis-penjualan')">Analisis Trend</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('management.laba-rugi')" :active="request()->routeIs('management.laba-rugi')">Laporan Laba Rugi</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('management.verifikasi')" :active="request()->routeIs('management.verifikasi')">Verifikasi Laporan</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('management.alokasi-stok')" :active="request()->routeIs('management.alokasi-stok')">Alokasi Stok Lapak</x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('management.laba-rugi')" :active="request()->routeIs('management.laba-rugi')">Laporan Laba Rugi</x-responsive-nav-link>
             @endif
 
             @if ($role === 'admin')
+                <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.dashboard')">Dashboard</x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('admin.users')" :active="request()->routeIs('admin.users')">Kelola User</x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('admin.lapaks')" :active="request()->routeIs('admin.lapaks')">Kelola Lapak</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('admin.lapak')" :active="request()->routeIs('admin.lapak')">Kelola Lapak</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('admin.produk')" :active="request()->routeIs('admin.produk')">Produk & Resep</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('admin.bahan-baku')" :active="request()->routeIs('admin.bahan-baku')">Master Bahan Baku</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('admin.audit-log')" :active="request()->routeIs('admin.audit-log')">Audit Log</x-responsive-nav-link>
             @endif
         </div>
 
