@@ -14,27 +14,29 @@ use Livewire\Livewire;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    // Buat role Sales jika belum ada
+    // 1. Sesuaikan field 'nama' => 'sales' sesuai pengecekan di routes/web.php
     $this->roleSales = Role::firstOrCreate(
+        ['nama' => 'sales'],
         ['nama_role' => 'Sales']
     );
 
-    // Buat data lapak dummy
+    // 2. Buat data lapak dummy
     $this->lapak = Lapak::create([
         'nama_lapak' => 'Lapak Utama',
         'alamat' => 'Jl. Sudirman No. 1',
     ]);
 
-    // Buat user kasir sales dummy
+    // 3. Tambahkan email_verified_at agar lolos dari middleware 'verified'
     $this->userSales = User::create([
         'name' => 'Kasir Sales',
         'email' => 'sales@beekopi.com',
+        'email_verified_at' => now(),
         'password' => bcrypt('password'),
         'role_id' => $this->roleSales->id,
         'lapak_id' => $this->lapak->id,
     ]);
 
-    // Buat produk dummy
+    // 4. Buat produk dummy
     $this->produk = Produk::create([
         'nama_produk' => 'Kopi Susu Aren',
         'kategori' => 'Kopi',
@@ -43,7 +45,7 @@ beforeEach(function () {
         'status' => 'aktif',
     ]);
 
-    // Set stok awal di lapak 10 cup
+    // 5. Set stok awal di lapak 10 cup
     $this->stokLapak = StokLapak::create([
         'lapak_id' => $this->lapak->id,
         'produk_id' => $this->produk->id,
@@ -52,12 +54,16 @@ beforeEach(function () {
 });
 
 test('user sales dapat mengakses halaman kasir pos', function () {
+    $this->withoutExceptionHandling();
+
     $this->actingAs($this->userSales)
         ->get(route('sales.kasir'))
         ->assertStatus(200);
 });
 
 test('kasir dapat menambahkan produk dan memproses transaksi', function () {
+    $this->withoutExceptionHandling();
+
     Livewire::actingAs($this->userSales)
         ->test(KasirLapak::class)
         ->call('tambahKeranjang', $this->produk->id)
