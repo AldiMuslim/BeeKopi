@@ -8,10 +8,13 @@ use App\Models\RiwayatBahanBaku;
 use App\Models\Transaksi;
 use Carbon\Carbon;
 use Livewire\Component;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Exports\LaporanLabaRugiExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DashboardLabaRugi extends Component
 {
-    public $periode = 'bulan_ini'; // 'hari_ini', 'bulan_ini', 'tahun_ini', 'custom'
+    public $periode = 'bulan_ini';
     public $tanggal_mulai;
     public $tanggal_selesai;
 
@@ -39,52 +42,72 @@ class DashboardLabaRugi extends Component
         }
     }
 
-    public function render()
+    public function exportPdf()
     {
         $start = Carbon::parse($this->tanggal_mulai)->startOfDay();
         $end = Carbon::parse($this->tanggal_selesai)->endOfDay();
 
-        // 1. Total Omzet Penjualan (Seluruh Lapak)
-        $totalOmzet = Transaksi::where('status', 'selesai')
-            ->whereBetween('created_at', [$start, $end])
-            ->sum('total_harga');
+        $totalOmzet = Transaksi::where('status', 'selesai')->whereBetween('created_at', [$start, $end])->sum('total_harga');
+        $omzetTunai = Transaksi::where('status', 'selesai')->where('metode_pembayaran', 'tunai')->whereBetween('created_at', [$start, $end])->sum('total_harga');
+        $omzetQris = Transaksi::where('status', 'selesai')->where('metode_pembayaran', 'qris')->whereBetween('created_at', [$start, $end])->sum('total_harga');
+        $totalBiayaBahan = RiwayatBahanBaku::where('jenis', 'masuk')->whereBetween('created_at', [$start, $end])->sum('total_biaya');
 
-        $omzetTunai = Transaksi::where('status', 'selesai')
-            ->where('metode_pembayaran', 'tunai')
-            ->whereBetween('created_at', [$start, $end])
-            ->sum('total_harga');
-
-        $omzetQris = Transaksi::where('status', 'selesai')
-            ->where('metode_pembayaran', 'qris')
-            ->whereBetween('created_at', [$start, $end])
-            ->sum('total_harga');
-
-        // 2. Total Pengeluaran Belanja Bahan Baku (Gudang Pusat)
-        $totalBiayaBahan = RiwayatBahanBaku::where('jenis', 'masuk')
-            ->whereBetween('created_at', [$start, $end])
-            ->sum('total_biaya');
-
-        // 3. Total Pengeluaran Operasional Lapak (Laporan Approved)
-        $laporansApproved = LaporanLapak::where('status', 'approved')
-            ->whereBetween('tanggal', [$this->tanggal_mulai, $this->tanggal_selesai])
-            ->get();
-
+        $laporansApproved = LaporanLapak::where('status', 'approved')->whereBetween('tanggal', [$this->tanggal_mulai, $this->tanggal_selesai])->get();
         $totalUangMakan = $laporansApproved->sum('uang_makan');
         $totalPengeluaranLain = $laporansApproved->sum('pengeluaran_lain');
         $totalBiayaOperasional = $totalUangMakan + $totalPengeluaranLain;
-
-        // 4. Perhitungan Laba / Rugi Bersih
         $totalPengeluaran = $totalBiayaBahan + $totalBiayaOperasional;
         $labaBersih = $totalOmzet - $totalPengeluaran;
 
-        // 5. Rekap Performa Penjualan Per Lapak
         $performaLapaks = Lapak::withCount(['transaksis as total_transaksi' => function ($q) use ($start, $end) {
             $q->where('status', 'selesai')->whereBetween('created_at', [$start, $end]);
         }])
             ->withSum(['transaksis as total_omzet' => function ($q) use ($start, $end) {
                 $q->where('status', 'selesai')->whereBetween('created_at', [$start, $end]);
-            }], 'total_harga')
-            ->get();
+            }], 'total_harga')->get();
+
+        $data = [
+            'tanggal_mulai' => $this->tanggal_mulai,
+            'tanggal_selesai' => $this->tanggal_selesai,
+            'totalOmzet' => $totalOmzet,
+            'omzetTunai' => $omzetTunai,
+            'omzetQris' => $omzetQris,
+            'totalBiayaBahan' => $totalBiayaBahan,
+            'totalBiayaOperasional' => $totalBiayaOperasional,
+            'totalUangMakan' => $totalUangMakan,
+            'totalPengeluaranLain' => $totalPengeluaranLain,
+            'totalPengeluaran' => $totalPengeluaran,
+            'labaBersih' => $labaBersih,
+            'performaLapaks' => $performaLapaks,
+        ];
+
+        $pdf = Pdf::loadView('pdf.laporan-laba-rugi', $data);
+        return response()->streamDownload(fn() => print($pdf->output()), 'Laporan_Laba_Rugi_BeeKopi_' . $this->tanggal_mulai . '_sd_' . $this->tanggal_selesai . '.pdf');
+    }
+
+    public function render()
+    {
+        $start = Carbon::parse($this->tanggal_mulai)->startOfDay();
+        $end = Carbon::parse($this->tanggal_selesai)->endOfDay();
+
+        $totalOmzet = Transaksi::where('status', 'selesai')->whereBetween('created_at', [$start, $end])->sum('total_harga');
+        $omzetTunai = Transaksi::where('status', 'selesai')->where('metode_pembayaran', 'tunai')->whereBetween('created_at', [$start, $end])->sum('total_harga');
+        $omzetQris = Transaksi::where('status', 'selesai')->where('metode_pembayaran', 'qris')->whereBetween('created_at', [$start, $end])->sum('total_harga');
+        $totalBiayaBahan = RiwayatBahanBaku::where('jenis', 'masuk')->whereBetween('created_at', [$start, $end])->sum('total_biaya');
+
+        $laporansApproved = LaporanLapak::where('status', 'approved')->whereBetween('tanggal', [$this->tanggal_mulai, $this->tanggal_selesai])->get();
+        $totalUangMakan = $laporansApproved->sum('uang_makan');
+        $totalPengeluaranLain = $laporansApproved->sum('pengeluaran_lain');
+        $totalBiayaOperasional = $totalUangMakan + $totalPengeluaranLain;
+        $totalPengeluaran = $totalBiayaBahan + $totalBiayaOperasional;
+        $labaBersih = $totalOmzet - $totalPengeluaran;
+
+        $performaLapaks = Lapak::withCount(['transaksis as total_transaksi' => function ($q) use ($start, $end) {
+            $q->where('status', 'selesai')->whereBetween('created_at', [$start, $end]);
+        }])
+            ->withSum(['transaksis as total_omzet' => function ($q) use ($start, $end) {
+                $q->where('status', 'selesai')->whereBetween('created_at', [$start, $end]);
+            }], 'total_harga')->get();
 
         return view('livewire.management.dashboard-laba-rugi', [
             'totalOmzet' => $totalOmzet,
@@ -98,5 +121,43 @@ class DashboardLabaRugi extends Component
             'labaBersih' => $labaBersih,
             'performaLapaks' => $performaLapaks,
         ])->layout('layouts.app');
+    }
+
+    public function exportExcel()
+    {
+        $start = Carbon::parse($this->tanggal_mulai)->startOfDay();
+        $end = Carbon::parse($this->tanggal_selesai)->endOfDay();
+
+        $totalOmzet = Transaksi::where('status', 'selesai')->whereBetween('created_at', [$start, $end])->sum('total_harga');
+        $omzetTunai = Transaksi::where('status', 'selesai')->where('metode_pembayaran', 'tunai')->whereBetween('created_at', [$start, $end])->sum('total_harga');
+        $omzetQris = Transaksi::where('status', 'selesai')->where('metode_pembayaran', 'qris')->whereBetween('created_at', [$start, $end])->sum('total_harga');
+        $totalBiayaBahan = RiwayatBahanBaku::where('jenis', 'masuk')->whereBetween('created_at', [$start, $end])->sum('total_biaya');
+
+        $laporansApproved = LaporanLapak::where('status', 'approved')->whereBetween('tanggal', [$this->tanggal_mulai, $this->tanggal_selesai])->get();
+        $totalUangMakan = $laporansApproved->sum('uang_makan');
+        $totalPengeluaranLain = $laporansApproved->sum('pengeluaran_lain');
+        $totalBiayaOperasional = $totalUangMakan + $totalPengeluaranLain;
+        $totalPengeluaran = $totalBiayaBahan + $totalBiayaOperasional;
+        $labaBersih = $totalOmzet - $totalPengeluaran;
+
+        $performaLapaks = Lapak::withSum(['transaksis as total_omzet' => function ($q) use ($start, $end) {
+            $q->where('status', 'selesai')->whereBetween('created_at', [$start, $end]);
+        }], 'total_harga')->get();
+
+        $data = [
+            'tanggal_mulai' => $this->tanggal_mulai,
+            'tanggal_selesai' => $this->tanggal_selesai,
+            'totalOmzet' => $totalOmzet,
+            'omzetTunai' => $omzetTunai,
+            'omzetQris' => $omzetQris,
+            'totalBiayaBahan' => $totalBiayaBahan,
+            'totalBiayaOperasional' => $totalBiayaOperasional,
+            'totalUangMakan' => $totalUangMakan,
+            'totalPengeluaranLain' => $totalPengeluaranLain,
+            'labaBersih' => $labaBersih,
+            'performaLapaks' => $performaLapaks,
+        ];
+
+        return Excel::download(new LaporanLabaRugiExport($data), 'Laporan_Laba_Rugi_BeeKopi_' . $this->tanggal_mulai . '_sd_' . $this->tanggal_selesai . '.xlsx');
     }
 }
