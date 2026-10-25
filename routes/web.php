@@ -1,4 +1,5 @@
 <?php
+
 use App\Livewire\Admin\DashboardAdmin;
 use App\Livewire\Admin\KelolaLapak;
 use App\Livewire\Admin\KelolaUser;
@@ -63,10 +64,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Modul Management
     Route::prefix('management')->name('management.')->group(function () {
+        Route::get('/analisis-penjualan', AnalisisPenjualan::class)->name('analisis-penjualan');
         Route::get('/verifikasi-laporan', VerifikasiLaporan::class)->name('verifikasi');
         Route::get('/alokasi-stok', AlokasiStok::class)->name('alokasi-stok');
         Route::get('/laba-rugi', DashboardLabaRugi::class)->name('laba-rugi');
-        Route::get('/analisis-penjualan', AnalisisPenjualan::class)->name('analisis-penjualan'); // Rute Analisis Trend
     });
 
     // Modul Admin

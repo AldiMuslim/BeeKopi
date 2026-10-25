@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Produksi;
 
+use App\Models\AuditLog;
 use App\Models\BahanBaku;
 use App\Models\RiwayatBahanBaku;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,13 @@ class KelolaBahanBaku extends Component
     public $jenis_penyesuaian = 'belanja'; // 'belanja', 'pemakaian', atau 'rusak'
     public $jumlah_jumlah = '';
     public $keterangan = '';
+
+    protected $paginationTheme = 'tailwind';
+
+    public function updatingSearch()
+    {
+        $this->resetPage();
+    }
 
     public function openModalBahan()
     {
@@ -74,6 +82,11 @@ class KelolaBahanBaku extends Component
             ]
         );
 
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'aktivitas' => $this->bahan_id ? "Memperbarui master bahan baku: {$this->nama_bahan}" : "Menambah master bahan baku baru: {$this->nama_bahan}",
+        ]);
+
         session()->flash('message', $this->bahan_id ? 'Bahan baku berhasil diperbarui!' : 'Bahan baku baru berhasil ditambahkan!');
         $this->showModalBahan = false;
     }
@@ -93,6 +106,7 @@ class KelolaBahanBaku extends Component
             'selected_bahan_id' => 'required|exists:bahan_bakus,id',
             'jenis_penyesuaian' => 'required|in:belanja,pemakaian,rusak',
             'jumlah_jumlah' => 'required|numeric|min:0.01',
+            'keterangan' => 'nullable|string|max:255',
         ]);
 
         try {
@@ -115,8 +129,12 @@ class KelolaBahanBaku extends Component
                         'keterangan' => $this->keterangan ?: 'Restok Belanja Harian',
                     ]);
 
-                    session()->flash('message', "Berhasil menambah stok {$bahan->nama_bahan} (+{$jumlah} {$bahan->satuan}) & tercatat di Log Belanja!");
+                    AuditLog::create([
+                        'user_id' => auth()->id(),
+                        'aktivitas' => "Input pasokan bahan: {$bahan->nama_bahan} (+{$jumlah} {$bahan->satuan})",
+                    ]);
 
+                    session()->flash('message', "Berhasil menambah stok {$bahan->nama_bahan} (+{$jumlah} {$bahan->satuan}) & tercatat di Log Belanja!");
                 } else {
                     // Penyesuaian Pemakaian / Rusak (- Out / 'keluar')
                     if ($bahan->stok_sekarang < $jumlah) {
@@ -126,6 +144,8 @@ class KelolaBahanBaku extends Component
                     // 1. Potong Stok Bahan Baku
                     $bahan->decrement('stok_sekarang', $jumlah);
 
+                    $defaultKeterangan = $this->jenis_penyesuaian === 'rusak' ? 'Bahan Rusak / Waste' : 'Pemakaian Manual Produksi';
+
                     // 2. Simpan Catatan Otomatis ke Log Pemakaian (- Out / 'keluar')
                     RiwayatBahanBaku::create([
                         'bahan_baku_id' => $bahan->id,
@@ -134,7 +154,12 @@ class KelolaBahanBaku extends Component
                         'jumlah' => $jumlah,
                         'satuan' => $bahan->satuan,
                         'total_biaya' => 0,
-                        'keterangan' => $this->keterangan ?: ($this->jenis_penyesuaian === 'rusak' ? 'Bahan Rusak / Waste' : 'Pemakaian Manual'),
+                        'keterangan' => $this->keterangan ?: $defaultKeterangan,
+                    ]);
+
+                    AuditLog::create([
+                        'user_id' => auth()->id(),
+                        'aktivitas' => "Pencatatan {$this->jenis_penyesuaian}: {$bahan->nama_bahan} (-{$jumlah} {$bahan->satuan})",
                     ]);
 
                     session()->flash('message', "Berhasil mengurangi stok {$bahan->nama_bahan} (-{$jumlah} {$bahan->satuan}) & tercatat di Log Pemakaian!");
@@ -142,7 +167,6 @@ class KelolaBahanBaku extends Component
             });
 
             $this->showModalStok = false;
-
         } catch (\Exception $e) {
             session()->flash('error', $e->getMessage());
         }
