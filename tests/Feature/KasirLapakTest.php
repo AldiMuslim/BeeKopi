@@ -14,10 +14,9 @@ use Livewire\Livewire;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    // 1. Buat role Sales dengan atribut lengkap
+    // 1. Buat role Sales hanya menggunakan kolom nama_role yang valid
     $this->roleSales = Role::firstOrCreate(
-        ['nama_role' => 'Sales'],
-        ['nama' => 'sales']
+        ['nama_role' => 'Sales']
     );
 
     // 2. Buat data lapak dummy
@@ -26,7 +25,7 @@ beforeEach(function () {
         'alamat' => 'Jl. Sudirman No. 1',
     ]);
 
-    // 3. Buat user kasir sales dengan email_verified_at agar lolos middleware 'verified'
+    // 3. Buat user kasir sales dengan email_verified_at agar lolos dari middleware verified
     $this->userSales = User::create([
         'name' => 'Kasir Sales',
         'email' => 'sales@beekopi.com',
