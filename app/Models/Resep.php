@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Resep extends Model
 {
-    protected $guarded = [];
+    protected $guarded = ['id'];
 
     public function produk()
     {
@@ -15,6 +15,11 @@ class Resep extends Model
 
     public function bahanBaku()
     {
-        return $this->belongsTo(BahanBaku::class);
+        return $this->belongsTo(BahanBaku::class, 'bahan_baku_id');
+    }
+
+    public function reseps()
+    {
+        return $this->hasMany(Resep::class, 'produk_id');
     }
 }

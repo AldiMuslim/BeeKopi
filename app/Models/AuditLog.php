@@ -11,9 +11,10 @@ class AuditLog extends Model
     use HasFactory;
 
     protected $fillable = ['user_id', 'aktivitas', 'keterangan'];
+    protected $guarded = ['id'];
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

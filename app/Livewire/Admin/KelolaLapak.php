@@ -2,32 +2,43 @@
 
 namespace App\Livewire\Admin;
 
+use App\Models\AuditLog;
 use App\Models\Lapak;
 use Livewire\Component;
 
 class KelolaLapak extends Component
 {
-    public $lapak_id;
-    public $nama_lapak;
-    public $lokasi;
+    // Form State
+    public $lapak_id = null;
+    public $nama_lapak = '';
+    public $lokasi = '';
     public $status = 'aktif';
 
-    public $showModalLapak = false;
+    // Filter & Search State
+    public $search = '';
+    public $statusFilter = '';
 
-    protected $rules = [
-        'nama_lapak' => 'required|string|max:255',
-        'lokasi' => 'nullable|string',
-        'status' => 'required|in:aktif,libur,perbaikan',
-    ];
+    // Modal State
+    public $showModalLapak = false;
 
     public function openModalLapak()
     {
         $this->resetForm();
+        $this->resetValidation();
         $this->showModalLapak = true;
+    }
+
+    public function resetForm()
+    {
+        $this->lapak_id = null;
+        $this->nama_lapak = '';
+        $this->lokasi = '';
+        $this->status = 'aktif';
     }
 
     public function editLapak($id)
     {
+        $this->resetValidation();
         $lapak = Lapak::findOrFail($id);
         $this->lapak_id = $lapak->id;
         $this->nama_lapak = $lapak->nama_lapak;
@@ -39,34 +50,68 @@ class KelolaLapak extends Component
 
     public function simpanLapak()
     {
-        $this->validate();
+        $this->validate([
+            'nama_lapak' => 'required|string|max:255|unique:lapaks,nama_lapak,' . $this->lapak_id,
+            'lokasi'     => 'nullable|string|max:500',
+            'status'     => 'required|in:aktif,libur,perbaikan',
+        ]);
 
-        Lapak::updateOrCreate(
+        $isNew = !$this->lapak_id;
+        $lapak = Lapak::updateOrCreate(
             ['id' => $this->lapak_id],
             [
                 'nama_lapak' => $this->nama_lapak,
-                'lokasi' => $this->lokasi,
-                'status' => $this->status,
+                'lokasi'     => $this->lokasi,
+                'status'     => $this->status,
             ]
         );
 
-        session()->flash('message', 'Data armada lapak berhasil diperbarui.');
+        AuditLog::create([
+            'user_id'   => auth()->id(),
+            'aktivitas' => $isNew
+                ? "Menambah armada lapak baru: {$lapak->nama_lapak}"
+                : "Memperbarui data lapak: {$lapak->nama_lapak} (Status: {$lapak->status})",
+        ]);
+
+        session()->flash('message', $isNew ? 'Armada lapak baru berhasil ditambahkan!' : 'Data armada lapak berhasil diperbarui!');
         $this->showModalLapak = false;
         $this->resetForm();
     }
 
-    public function resetForm()
+    public function toggleQuickStatus($id, $nextStatus)
     {
-        $this->lapak_id = null;
-        $this->nama_lapak = '';
-        $this->lokasi = '';
-        $this->status = 'aktif';
+        $lapak = Lapak::findOrFail($id);
+        $oldStatus = $lapak->status;
+        $lapak->update(['status' => $nextStatus]);
+
+        AuditLog::create([
+            'user_id'   => auth()->id(),
+            'aktivitas' => "Mengubah status operasional lapak {$lapak->nama_lapak} dari {$oldStatus} menjadi {$nextStatus}",
+        ]);
+
+        session()->flash('message', "Status operasional '{$lapak->nama_lapak}' berhasil diubah menjadi " . strtoupper($nextStatus) . ".");
     }
 
     public function render()
     {
+        $lapaks = Lapak::with(['users' => function ($q) {
+            $q->where('status', 'aktif');
+        }])
+            ->withCount('users')
+            ->when($this->search, function ($query) {
+                $query->where(function ($sub) {
+                    $sub->where('nama_lapak', 'like', '\%' . $this->search . '%')
+                        ->orWhere('lokasi', 'like', '%' . $this->search . '%');
+                });
+            })
+            ->when($this->statusFilter, function ($query) {
+                $query->where('status', $this->statusFilter);
+            })
+            ->orderBy('nama_lapak', 'asc')
+            ->get();
+
         return view('livewire.admin.kelola-lapak', [
-            'lapaks' => Lapak::withCount('users')->get(),
+            'lapaks' => $lapaks,
         ])->layout('layouts.app');
     }
 }
