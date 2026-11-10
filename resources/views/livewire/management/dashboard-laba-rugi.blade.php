@@ -2,7 +2,7 @@
     <div class="p-4 sm:p-6 bg-gray-50 min-h-screen">
         <div class="max-w-7xl mx-auto space-y-6">
 
-            <!-- Header & Filter Periode + Tombol Export -->
+            <!-- Header & Control Filter Periode + Tombol Export -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 class="text-xl font-bold text-gray-800">Laporan Laba & Rugi (Bee Kopi)</h1>
@@ -24,10 +24,10 @@
 
                         @if ($periode === 'custom')
                             <input type="date" wire:model.live="tanggal_mulai"
-                                class="px-2.5 py-1.5 border rounded-lg focus:ring-2 focus:ring-amber-500 bg-white">
-                            <span class="text-gray-400">s/d</span>
+                                class="px-2.5 py-1.5 border rounded-lg focus:ring-2 focus:ring-amber-500 bg-white text-xs font-semibold">
+                            <span class="text-gray-400 font-bold">s/d</span>
                             <input type="date" wire:model.live="tanggal_selesai"
-                                class="px-2.5 py-1.5 border rounded-lg focus:ring-2 focus:ring-amber-500 bg-white">
+                                class="px-2.5 py-1.5 border rounded-lg focus:ring-2 focus:ring-amber-500 bg-white text-xs font-semibold">
                         @endif
                     </div>
 
@@ -57,14 +57,23 @@
                 </div>
             </div>
 
-            <!-- Card Summary Utama Laba Rugi -->
+            <!-- Card Summary Utama Laba Rugi (Interaktif / Clickable Drill-Down) -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Total Omzet Kotor -->
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-2">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block">Total Omzet
-                        Penjualan</span>
-                    <span class="text-xl font-black text-emerald-600 block">Rp
-                        {{ number_format($totalOmzet, 0, ',', '.') }}</span>
+
+                <!-- 1. Card Total Omzet Penjualan -->
+                <div wire:click="openModal('omzet')"
+                    class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-emerald-400 hover:shadow-md transition cursor-pointer space-y-2 group">
+                    <div class="flex justify-between items-center">
+                        <span
+                            class="text-[11px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-emerald-600">Total
+                            Omzet Penjualan</span>
+                        <span
+                            class="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded border border-emerald-200">Klik
+                            Detail 🔍</span>
+                    </div>
+                    <span class="text-xl font-black text-emerald-600 block">
+                        Rp {{ number_format($totalOmzet, 0, ',', '.') }}
+                    </span>
                     <div
                         class="flex justify-between items-center text-[11px] pt-1 border-t border-gray-50 text-gray-500">
                         <span>Tunai: <b>Rp {{ number_format($omzetTunai, 0, ',', '.') }}</b></span>
@@ -72,21 +81,37 @@
                     </div>
                 </div>
 
-                <!-- Belanja Bahan Baku (HPP) -->
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-2">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block">Belanja Bahan
-                        Baku</span>
-                    <span class="text-xl font-black text-rose-600 block">Rp
-                        {{ number_format($totalBiayaBahan, 0, ',', '.') }}</span>
+                <!-- 2. Card Belanja Bahan Baku (HPP / Restok Gudang) -->
+                <div wire:click="openModal('bahan')"
+                    class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-rose-400 hover:shadow-md transition cursor-pointer space-y-2 group">
+                    <div class="flex justify-between items-center">
+                        <span
+                            class="text-[11px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-rose-600">Belanja
+                            Bahan Baku</span>
+                        <span
+                            class="text-[10px] bg-rose-50 text-rose-700 font-bold px-1.5 py-0.5 rounded border border-rose-200">Klik
+                            Detail 🔍</span>
+                    </div>
+                    <span class="text-xl font-black text-rose-600 block">
+                        Rp {{ number_format($totalBiayaBahan, 0, ',', '.') }}
+                    </span>
                     <p class="text-[11px] text-gray-400 pt-1 border-t border-gray-50">Sisa / Restok Gudang Pusat</p>
                 </div>
 
-                <!-- Operasional Lapak -->
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-2">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block">Operasional
-                        Lapak</span>
-                    <span class="text-xl font-black text-amber-600 block">Rp
-                        {{ number_format($totalBiayaOperasional, 0, ',', '.') }}</span>
+                <!-- 3. Card Operasional Lapak -->
+                <div wire:click="openModal('operasional')"
+                    class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-amber-400 hover:shadow-md transition cursor-pointer space-y-2 group">
+                    <div class="flex justify-between items-center">
+                        <span
+                            class="text-[11px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-amber-600">Operasional
+                            Lapak</span>
+                        <span
+                            class="text-[10px] bg-amber-50 text-amber-700 font-bold px-1.5 py-0.5 rounded border border-amber-200">Klik
+                            Detail 🔍</span>
+                    </div>
+                    <span class="text-xl font-black text-amber-600 block">
+                        Rp {{ number_format($totalBiayaOperasional, 0, ',', '.') }}
+                    </span>
                     <div
                         class="flex justify-between items-center text-[11px] pt-1 border-t border-gray-50 text-gray-500">
                         <span>Makan: <b>Rp {{ number_format($totalUangMakan, 0, ',', '.') }}</b></span>
@@ -94,13 +119,21 @@
                     </div>
                 </div>
 
-                <!-- Net Profit / Laba Bersih -->
-                <div class="bg-amber-600 text-white p-4 rounded-xl shadow-md space-y-2">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-amber-100 block">Estimasi Laba
-                        Bersih</span>
-                    <span class="text-2xl font-black block">Rp {{ number_format($labaBersih, 0, ',', '.') }}</span>
+                <!-- 4. Card Net Profit / Estimasi Laba Bersih -->
+                <div wire:click="openModal('laba')"
+                    class="bg-amber-600 text-white p-4 rounded-xl shadow-md hover:bg-amber-700 transition cursor-pointer space-y-2 group">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-amber-100">Estimasi Laba
+                            Bersih</span>
+                        <span
+                            class="text-[10px] bg-amber-500 text-white font-bold px-1.5 py-0.5 rounded border border-amber-400">Profit
+                            Margin: {{ $profitMargin }}%</span>
+                    </div>
+                    <span class="text-2xl font-black block">
+                        Rp {{ number_format($labaBersih, 0, ',', '.') }}
+                    </span>
                     <p class="text-[11px] text-amber-100/80 pt-1 border-t border-amber-500">Omzet - Total Pengeluaran
-                    </p>
+                        (Klik Detail)</p>
                 </div>
             </div>
 
@@ -109,7 +142,7 @@
                 <div class="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
                     <div>
                         <h2 class="font-bold text-xs uppercase tracking-wider text-gray-800">Kontribusi Penjualan Per
-                            Lapak</h2>
+                            Lapak Cabang</h2>
                         <p class="text-[11px] text-gray-400">Peringkat kontribusi pendapatan dari setiap armada cabang
                             lapak.</p>
                     </div>
@@ -162,6 +195,251 @@
                     </table>
                 </div>
             </div>
+
+            <!-- MODAL DRILL-DOWN DETAIL FINANSIAL -->
+            @if ($showModalDetail)
+                <div
+                    class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div
+                        class="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-150">
+
+                        <!-- Modal Header -->
+                        <div class="p-4 sm:p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <div>
+                                <h3 class="font-bold text-sm sm:text-base text-gray-800">{{ $modalTitle }}</h3>
+                                <p class="text-[11px] text-gray-500">Data auditabel periode
+                                    {{ \Carbon\Carbon::parse($tanggal_mulai)->format('d M Y') }} s/d
+                                    {{ \Carbon\Carbon::parse($tanggal_selesai)->format('d M Y') }}</p>
+                            </div>
+                            <button wire:click="closeModal"
+                                class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-200 transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Modal Body (Content Dinamis berdasarkan $modalType) -->
+                        <div class="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs">
+
+                            <!-- 1. DETAIL OMZET PENJUALAN -->
+                            @if ($modalType === 'omzet')
+                                <div class="grid grid-cols-2 gap-3 mb-4">
+                                    <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                                        <span class="text-emerald-800 font-semibold block text-[11px]">Total Penerimaan
+                                            Tunai</span>
+                                        <span class="text-base font-black text-emerald-700">Rp
+                                            {{ number_format($omzetTunai, 0, ',', '.') }}</span>
+                                    </div>
+                                    <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                                        <span class="text-blue-800 font-semibold block text-[11px]">Total Penerimaan
+                                            QRIS</span>
+                                        <span class="text-base font-black text-blue-700">Rp
+                                            {{ number_format($omzetQris, 0, ',', '.') }}</span>
+                                    </div>
+                                </div>
+
+                                <div class="border border-gray-100 rounded-xl overflow-hidden">
+                                    <table class="w-full text-left">
+                                        <thead
+                                            class="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase font-semibold">
+                                            <tr>
+                                                <th class="py-2.5 px-3">No. Struk</th>
+                                                <th class="py-2.5 px-3">Lapak</th>
+                                                <th class="py-2.5 px-3">Kasir</th>
+                                                <th class="py-2.5 px-3">Metode</th>
+                                                <th class="py-2.5 px-3 text-right">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 text-gray-700">
+                                            @forelse ($transaksis as $tx)
+                                                <tr class="hover:bg-gray-50/50">
+                                                    <td class="py-2 px-3 font-bold text-gray-800">
+                                                        {{ $tx->nomor_transaksi }}</td>
+                                                    <td class="py-2 px-3">{{ $tx->lapak->nama_lapak ?? '-' }}</td>
+                                                    <td class="py-2 px-3">{{ $tx->user->name ?? 'Kasir' }}</td>
+                                                    <td class="py-2 px-3 uppercase font-semibold text-[10px]">
+                                                        <span
+                                                            class="px-2 py-0.5 rounded {{ $tx->metode_pembayaran === 'tunai' ? 'bg-emerald-100 text-emerald-800' : ($tx->metode_pembayaran === 'qris' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800') }}">
+                                                            {{ $tx->metode_pembayaran }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="py-2 px-3 text-right font-black text-emerald-600">Rp
+                                                        {{ number_format($tx->total_harga, 0, ',', '.') }}</td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="5" class="py-6 text-center text-gray-400 italic">
+                                                        Tidak ada transaksi pada periode ini.</td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+
+                            <!-- 2. DETAIL BELANJA BAHAN BAKU (GUDANG/PRODUKSI) -->
+                            @if ($modalType === 'bahan')
+                                <div
+                                    class="p-3 bg-rose-50 border border-rose-200 rounded-xl mb-3 flex justify-between items-center">
+                                    <span class="text-rose-900 font-bold">Total Akumulasi Pembelian Bahan Baku:</span>
+                                    <span class="text-base font-black text-rose-700">Rp
+                                        {{ number_format($totalBiayaBahan, 0, ',', '.') }}</span>
+                                </div>
+
+                                <div class="border border-gray-100 rounded-xl overflow-hidden">
+                                    <table class="w-full text-left">
+                                        <thead
+                                            class="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase font-semibold">
+                                            <tr>
+                                                <th class="py-2.5 px-3">Waktu Restok</th>
+                                                <th class="py-2.5 px-3">Nama Bahan Baku</th>
+                                                <th class="py-2.5 px-3">Jumlah (Qty)</th>
+                                                <th class="py-2.5 px-3 text-right">Total Biaya</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 text-gray-700">
+                                            @forelse ($riwayatBahan as $rb)
+                                                <tr class="hover:bg-gray-50/50">
+                                                    <td class="py-2 px-3 text-gray-500">
+                                                        {{ \Carbon\Carbon::parse($rb->created_at)->format('d/m/Y H:i') }}
+                                                    </td>
+                                                    <td class="py-2 px-3 font-bold text-gray-800">
+                                                        {{ $rb->bahanBaku->nama_bahan ?? 'Bahan Baku' }}</td>
+                                                    <td class="py-2 px-3 font-semibold">{{ $rb->jumlah }}
+                                                        {{ $rb->bahanBaku->satuan ?? 'unit' }}</td>
+                                                    <td class="py-2 px-3 text-right font-black text-rose-600">Rp
+                                                        {{ number_format($rb->total_biaya, 0, ',', '.') }}</td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="4" class="py-6 text-center text-gray-400 italic">
+                                                        Tidak ada catatan belanja bahan baku pada periode ini.</td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+
+                            <!-- 3. DETAIL OPERASIONAL LAPAK -->
+                            @if ($modalType === 'operasional')
+                                <div class="grid grid-cols-2 gap-3 mb-3">
+                                    <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                                        <span class="text-amber-800 font-semibold block text-[11px]">Total Uang Makan
+                                            Staff</span>
+                                        <span class="text-base font-black text-amber-700">Rp
+                                            {{ number_format($totalUangMakan, 0, ',', '.') }}</span>
+                                    </div>
+                                    <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                                        <span class="text-amber-800 font-semibold block text-[11px]">Total Pengeluaran
+                                            Lain-lain</span>
+                                        <span class="text-base font-black text-amber-700">Rp
+                                            {{ number_format($totalPengeluaranLain, 0, ',', '.') }}</span>
+                                    </div>
+                                </div>
+
+                                <div class="border border-gray-100 rounded-xl overflow-hidden">
+                                    <table class="w-full text-left">
+                                        <thead
+                                            class="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase font-semibold">
+                                            <tr>
+                                                <th class="py-2.5 px-3">Tanggal Shift</th>
+                                                <th class="py-2.5 px-3">Lapak Cabang</th>
+                                                <th class="py-2.5 px-3">Uang Makan</th>
+                                                <th class="py-2.5 px-3">Pengeluaran Lain</th>
+                                                <th class="py-2.5 px-3 text-right">Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 text-gray-700">
+                                            @forelse ($laporansApproved as $lap)
+                                                <tr class="hover:bg-gray-50/50">
+                                                    <td class="py-2 px-3 text-gray-500">
+                                                        {{ \Carbon\Carbon::parse($lap->tanggal)->format('d M Y') }}
+                                                    </td>
+                                                    <td class="py-2 px-3 font-bold text-gray-800">
+                                                        {{ $lap->lapak->nama_lapak ?? '-' }}</td>
+                                                    <td class="py-2 px-3">Rp
+                                                        {{ number_format($lap->uang_makan, 0, ',', '.') }}</td>
+                                                    <td class="py-2 px-3">Rp
+                                                        {{ number_format($lap->pengeluaran_lain, 0, ',', '.') }}</td>
+                                                    <td class="py-2 px-3 text-right font-black text-amber-600">Rp
+                                                        {{ number_format($lap->uang_makan + $lap->pengeluaran_lain, 0, ',', '.') }}
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="5" class="py-6 text-center text-gray-400 italic">
+                                                        Belum ada laporan operasional lapak disetujui (Approved) pada
+                                                        periode ini.</td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+
+                            <!-- 4. DETAIL LABA BERSIH & PROFIT MARGIN -->
+                            @if ($modalType === 'laba')
+                                <div class="p-4 bg-gray-50 border border-gray-200 rounded-2xl space-y-3">
+                                    <h4
+                                        class="font-bold text-gray-800 text-xs uppercase tracking-wider border-b border-gray-200 pb-2">
+                                        Matriks Perhitungan Laba Bersih</h4>
+
+                                    <div class="space-y-2 text-xs">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-600 font-semibold">(+) Total Omzet Penjualan
+                                                Kotor</span>
+                                            <span class="font-extrabold text-emerald-600">Rp
+                                                {{ number_format($totalOmzet, 0, ',', '.') }}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-600 font-semibold">(-) Total Belanja Bahan Baku
+                                                (Gudang)</span>
+                                            <span class="font-extrabold text-rose-600">Rp
+                                                {{ number_format($totalBiayaBahan, 0, ',', '.') }}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-600 font-semibold">(-) Total Biaya Operasional
+                                                Lapak</span>
+                                            <span class="font-extrabold text-amber-600">Rp
+                                                {{ number_format($totalBiayaOperasional, 0, ',', '.') }}</span>
+                                        </div>
+                                        <div
+                                            class="border-t border-gray-300 pt-2 flex justify-between items-center text-sm">
+                                            <span class="font-black text-gray-900">(=) Estimasi Laba Bersih (Net
+                                                Profit)</span>
+                                            <span class="font-black text-amber-600 text-base">Rp
+                                                {{ number_format($labaBersih, 0, ',', '.') }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div
+                                    class="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex justify-between items-center">
+                                    <div>
+                                        <span class="font-bold text-amber-900 block text-xs">Rasio Margin Keuntungan
+                                            (Net Profit Margin)</span>
+                                        <span class="text-[11px] text-amber-700">Persentase laba bersih terhadap omzet
+                                            kotor</span>
+                                    </div>
+                                    <span class="text-2xl font-black text-amber-800">{{ $profitMargin }}%</span>
+                                </div>
+                            @endif
+
+                        </div>
+
+                        <!-- Modal Footer -->
+                        <div class="p-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+                            <button wire:click="closeModal"
+                                class="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white font-bold text-xs rounded-xl transition">
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            @endif
 
         </div>
     </div>

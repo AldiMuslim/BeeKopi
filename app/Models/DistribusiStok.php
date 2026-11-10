@@ -9,15 +9,8 @@ class DistribusiStok extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'kode_distribusi',
-        'lapak_id',
-        'user_id',
-        'penerima_id',
-        'tanggal',
-        'catatan',
-        'status',
-    ];
+    // Mengizinkan mass-assignment untuk semua kolom (termasuk catatan_penerimaan & catatan_penolakan)
+    protected $guarded = ['id'];
 
     public function lapak()
     {

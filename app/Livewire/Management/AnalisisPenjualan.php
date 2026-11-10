@@ -23,7 +23,9 @@ class AnalisisPenjualan extends Component
 
     public function updatedPeriode()
     {
-        $this->setPeriodeDates();
+        if ($this->periode !== 'custom') {
+            $this->setPeriodeDates();
+        }
     }
 
     public function setPeriodeDates()
@@ -52,7 +54,36 @@ class AnalisisPenjualan extends Component
         $end = Carbon::parse($this->tanggal_selesai)->endOfDay();
         $selectedLapak = $this->lapak_id;
 
-        // 1. Ranking Produk Terlaris (Top 5 Menu) - Filter Lapak
+        // Query Utama Transaksi Selesai
+        $baseTransaksiQuery = Transaksi::where('status', 'selesai')
+            ->whereBetween('created_at', [$start, $end])
+            ->when($selectedLapak, fn($query) => $query->where('lapak_id', $selectedLapak));
+
+        // 1. Core KPI Metrics
+        $totalOmzet = (float) (clone $baseTransaksiQuery)->sum('total_harga');
+        $totalTx = (int) (clone $baseTransaksiQuery)->count();
+
+        $totalCup = (int) TransaksiDetail::whereHas('transaksi', function ($q) use ($start, $end, $selectedLapak) {
+            $q->where('status', 'selesai')
+                ->whereBetween('created_at', [$start, $end])
+                ->when($selectedLapak, fn($query) => $query->where('lapak_id', $selectedLapak));
+        })->sum('jumlah');
+
+        $aov = $totalTx > 0 ? round($totalOmzet / $totalTx) : 0;
+
+        // 2. Analisis Metode Pembayaran (Tunai vs QRIS vs Split)
+        $transaksiAll = (clone $baseTransaksiQuery)->get();
+        $omzetTunai = $transaksiAll->where('metode_pembayaran', 'tunai')->sum('total_harga')
+            + $transaksiAll->where('metode_pembayaran', 'split')->sum('bayar_tunai');
+
+        $omzetQris = $transaksiAll->where('metode_pembayaran', 'qris')->sum('total_harga')
+            + $transaksiAll->where('metode_pembayaran', 'split')->sum('bayar_qris');
+
+        $countTunai = $transaksiAll->where('metode_pembayaran', 'tunai')->count();
+        $countQris = $transaksiAll->where('metode_pembayaran', 'qris')->count();
+        $countSplit = $transaksiAll->where('metode_pembayaran', 'split')->count();
+
+        // 3. Ranking Top 5 Produk Terlaris
         $topProduk = TransaksiDetail::with('produk')
             ->whereHas('transaksi', function ($q) use ($start, $end, $selectedLapak) {
                 $q->where('status', 'selesai')
@@ -65,25 +96,21 @@ class AnalisisPenjualan extends Component
             ->take(5)
             ->get();
 
-        // 2. Analisis Jam Sibuk Penjualan (Peak Hours) - Filter Lapak
-        $jamSibuk = Transaksi::where('status', 'selesai')
-            ->whereBetween('created_at', [$start, $end])
-            ->when($selectedLapak, fn($query) => $query->where('lapak_id', $selectedLapak))
+        // 4. Analisis Jam Sibuk Penjualan (Peak Hours)
+        $jamSibuk = (clone $baseTransaksiQuery)
             ->select(DB::raw('HOUR(created_at) as jam'), DB::raw('COUNT(*) as total_transaksi'), DB::raw('SUM(total_harga) as total_omzet'))
             ->groupBy('jam')
             ->orderBy('jam')
             ->get();
 
-        // 3. Tren Omzet Harian - Filter Lapak
-        $trenHarian = Transaksi::where('status', 'selesai')
-            ->whereBetween('created_at', [$start, $end])
-            ->when($selectedLapak, fn($query) => $query->where('lapak_id', $selectedLapak))
+        // 5. Tren Omzet Harian
+        $trenHarian = (clone $baseTransaksiQuery)
             ->select(DB::raw('DATE(created_at) as tanggal'), DB::raw('SUM(total_harga) as omzet'), DB::raw('COUNT(*) as total_tx'))
             ->groupBy('tanggal')
             ->orderBy('tanggal', 'asc')
             ->get();
 
-        // 4. Performa Penjualan Per Lapak Cabang
+        // 6. Performa Penjualan Per Lapak Cabang
         $performaLapak = Lapak::when($selectedLapak, fn($query) => $query->where('id', $selectedLapak))
             ->withSum(['transaksis as total_omzet' => function ($q) use ($start, $end) {
                 $q->where('status', 'selesai')->whereBetween('created_at', [$start, $end]);
@@ -93,14 +120,19 @@ class AnalisisPenjualan extends Component
             }])
             ->get();
 
-        // 5. Total Omzet Keseluruhan Filter untuk Rasio Persentase
-        $totalOmzetAll = Transaksi::where('status', 'selesai')
-            ->whereBetween('created_at', [$start, $end])
-            ->when($selectedLapak, fn($query) => $query->where('lapak_id', $selectedLapak))
-            ->sum('total_harga') ?: 1;
+        $totalOmzetAll = $totalOmzet ?: 1;
 
         return view('livewire.management.analisis-penjualan', [
             'lapaks' => Lapak::all(),
+            'totalOmzet' => $totalOmzet,
+            'totalTx' => $totalTx,
+            'totalCup' => $totalCup,
+            'aov' => $aov,
+            'omzetTunai' => $omzetTunai,
+            'omzetQris' => $omzetQris,
+            'countTunai' => $countTunai,
+            'countQris' => $countQris,
+            'countSplit' => $countSplit,
             'topProduk' => $topProduk,
             'jamSibuk' => $jamSibuk,
             'trenHarian' => $trenHarian,

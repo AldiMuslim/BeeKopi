@@ -1,58 +1,44 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# BeeKopi - Sistem Manajemen Lapak & Operasional Kopi
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+BeeKopi adalah aplikasi Point of Sales (POS) dan Enterprise Resource Planning (ERP) terpadu untuk jaringan gerai kopi. Sistem ini mengintegrasikan seluruh alur operasional mulai dari rantai pasok bahan baku, pabrikasi racik batch minuman, alokasi pasokan ke armada lapak, hingga rekonsiliasi kas dan pelaporan laba rugi harian.
 
-## About Laravel
+## Modul & Fitur Utama
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### 1. Modul Sales (Armada Lapak)
+- **Kasir POS Lapak**: Transaksi penjualan pesanan pelanggan (Tunai / QRIS), pengecekan stok otomatis, dan cetak struk nota belanja.
+- **Penerimaan Stok**: Verifikasi pasokan cup yang dikirim dari Gudang Pusat dengan aksi Terima atau Tolak.
+- **Laporan Penutupan Shift**: Rekonsiliasi kas omzet fisik dan sistem, pencatatan sisa fisik (opname), pelaporan cup rusak, uang makan penjaga, serta biaya operasional lapak.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 2. Modul Produksi (Gudang Pusat & Roastery)
+- **Racik Batch Kopi**: Produksi batch minuman terstandar dengan kalkulasi otomatis pemotongan stok bahan baku mentah (biji kopi, susu, sirup, bubuk, cup) berdasarkan resep formula.
+- **Kelola Master Bahan Baku**: Manajemen persediaan bahan baku mentah, peringatan batas stok kritis, dan buku mutasi (Log Belanja Masuk & Log Pemakaian Keluar).
+- **Formula Varian & Resep**: Pembuatan varian baru dengan kalkulasi HPP otomatis per cup.
+- **Monitoring Restock**: Dashboard stok produk siap jual di pusat dan tiket alokasi aktif.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 3. Modul Manajemen (Supervisi & Eksekutif)
+- **Alokasi Distribusi Stok**: Penerbitan tiket pengiriman produk dari gudang pusat ke armada lapak cabang.
+- **Verifikasi Laporan Shift**: Audit rekonsiliasi fisik vs kasir, evaluasi nota pengeluaran, dan persetujuan penutupan shift.
+- **Analisis Penjualan & Jam Sibuk**: Wawasan produk terlaris (Top 5 Menu), jam sibuk (Peak Hours), dan komparasi performa antar lapak cabang.
+- **Dashboard Laba Rugi**: Laporan laba rugi standar akuntansi (Omzet, Biaya Bahan Baku, Biaya Operasional, dan Net Profit) dengan opsi ekspor CSV dan cetak PDF.
 
-## Learning Laravel
+### 4. Modul Administrator
+- **Dashboard Eksekutif**: Tren omzet harian dan distribusi penjualan per cabang.
+- **Kelola Pengguna**: Manajemen akun dan hak akses peran (Admin, Management, Produksi, Sales).
+- **Kelola Armada Lapak**: Manajemen titik cabang gerai dan status operasional.
+- **Kelola Katalog Produk**: Pengaturan harga jual, HPP, dan formula resep varian.
+- **Audit Log Sistem**: Rekam jejak aktivitas operasional dan keamanan sistem.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Akun Demo & Quick Switcher
+Gunakan menu dropdown profil di sudut kanan atas untuk berganti peran dengan 1 klik:
+- **Admin**: `admin@beekopi.com`
+- **Management**: `management@beekopi.com`
+- **Produksi**: `produksi@beekopi.com`
+- **Sales Lapak A**: `salesa@beekopi.com`
+- **Sales Lapak B**: `salesb@beekopi.com`
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
+## Menjalankan Aplikasi
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+npm install
+npm run dev
 ```
-
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Aplikasi berjalan pada `http://localhost:3000`.

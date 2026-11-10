@@ -35,49 +35,69 @@
                     </span>
                 </div>
 
-                <div class="space-y-3">
+                <div class="space-y-4">
                     @forelse ($pengirimanPending as $dst)
-                        <div
-                            class="p-4 bg-amber-50/50 border border-amber-200/80 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div class="space-y-2">
-                                <div class="flex items-center gap-2">
-                                    <span class="font-black text-gray-900 text-sm">#{{ $dst->kode_distribusi }}</span>
-                                    <span class="text-gray-400 text-[11px]">•
-                                        {{ \Carbon\Carbon::parse($dst->tanggal)->format('d M Y') }}</span>
-                                    <span
-                                        class="px-2 py-0.5 bg-amber-100 text-amber-800 font-bold text-[10px] rounded animate-pulse">Dalam
-                                        Transit</span>
-                                </div>
-
-                                <!-- Rincian Item Dikirim -->
-                                <div class="flex flex-wrap gap-1.5">
-                                    @foreach ($dst->details as $det)
+                        <div class="p-4 bg-amber-50/50 border border-amber-200/80 rounded-xl space-y-3">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                <div class="space-y-1.5">
+                                    <div class="flex items-center gap-2">
                                         <span
-                                            class="inline-flex items-center px-2.5 py-1 bg-white text-gray-800 rounded-lg border border-amber-200 font-semibold text-xs">
-                                            {{ $det->produk->nama_produk ?? 'Produk' }}: <b
-                                                class="ml-1 text-amber-600">{{ $det->jumlah_cup }} cup</b>
-                                        </span>
-                                    @endforeach
+                                            class="font-black text-gray-900 text-sm">#{{ $dst->kode_distribusi }}</span>
+                                        <span class="text-gray-400 text-[11px]">•
+                                            {{ \Carbon\Carbon::parse($dst->tanggal)->format('d M Y') }}</span>
+                                        <span
+                                            class="px-2 py-0.5 bg-amber-100 text-amber-800 font-bold text-[10px] rounded animate-pulse">Dalam
+                                            Transit</span>
+                                    </div>
+
+                                    <!-- Rincian Item Dikirim -->
+                                    <div class="flex flex-wrap gap-1.5">
+                                        @foreach ($dst->details as $det)
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-1 bg-white text-gray-800 rounded-lg border border-amber-200 font-semibold text-xs">
+                                                {{ $det->produk->nama_produk ?? 'Produk' }}:
+                                                <b class="ml-1 text-amber-600">{{ $det->jumlah_cup }} cup</b>
+                                            </span>
+                                        @endforeach
+                                    </div>
+
+                                    @if ($dst->catatan)
+                                        <p class="text-[11px] text-gray-600 italic"><b>Catatan Pengirim:</b>
+                                            {{ $dst->catatan }}</p>
+                                    @endif
+                                    <p class="text-[10px] text-gray-400">Dikirim oleh:
+                                        {{ $dst->pengirim->name ?? 'Gudang Pusat' }}</p>
                                 </div>
 
-                                @if ($dst->catatan)
-                                    <p class="text-[11px] text-gray-600 italic"><b>Catatan Pengirim:</b>
-                                        {{ $dst->catatan }}</p>
-                                @endif
-                                <p class="text-[10px] text-gray-400">Dikirim oleh:
-                                    {{ $dst->pengirim->name ?? 'Gudang Pusat' }}</p>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <button wire:click="tolakStok({{ $dst->id }})"
+                                        wire:confirm="Yakin ingin menolak pengiriman stok ini? Pastikan alasan penolakan sudah diisi."
+                                        class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-lg transition border border-rose-200">
+                                        Tolak Kiriman
+                                    </button>
+                                    <button wire:click="terimaStok({{ $dst->id }})"
+                                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition shadow-sm">
+                                        ✓ Terima & Tambah Stok
+                                    </button>
+                                </div>
                             </div>
 
-                            <div class="flex items-center gap-2 shrink-0">
-                                <button wire:click="tolakStok({{ $dst->id }})"
-                                    wire:confirm="Yakin ingin menolak pengiriman stok ini?"
-                                    class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-lg transition border border-rose-200">
-                                    Tolak Kiriman
-                                </button>
-                                <button wire:click="terimaStok({{ $dst->id }})"
-                                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition shadow-sm">
-                                    ✓ Terima & Tambah Stok
-                                </button>
+                            <!-- Input Form Catatan Penerimaan & Alasan Penolakan dengan wire:model.live -->
+                            <div class="pt-2 border-t border-amber-200/50 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-gray-600 mb-1">Catatan Penerimaan
+                                        / Transit (Opsional):</label>
+                                    <input type="text" wire:model.live="catatan_penerimaan.{{ $dst->id }}"
+                                        placeholder="Misal: Diterima lengkap / 1 cup pecah di jalan"
+                                        class="w-full px-3 py-1.5 border border-gray-200 rounded-md text-xs focus:ring-2 focus:ring-emerald-500 bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-rose-600 mb-1">Alasan Penolakan
+                                        (Wajib jika menolak):</label>
+                                    <input type="text" wire:model.live="catatan_penolakan.{{ $dst->id }}"
+                                        placeholder="Misal: Jumlah cup tidak sesuai manifest kirim"
+                                        class="w-full px-3 py-1.5 border border-rose-200 rounded-md text-xs focus:ring-2 focus:ring-rose-500 bg-white">
+                                </div>
                             </div>
                         </div>
                     @empty
@@ -89,8 +109,8 @@
                 </div>
             </div>
 
-            <!-- Section 2: Riwayat Penerimaan Stok -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <!-- Section 2: Riwayat Penerimaan Stok Lapak -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden text-xs">
                 <div class="p-4 border-b border-gray-100 bg-gray-50/50">
                     <h2 class="font-bold text-xs uppercase text-gray-700">Histori Penerimaan Stok Lapak</h2>
                 </div>
@@ -102,6 +122,7 @@
                                 class="bg-gray-50 border-b border-gray-100 text-gray-500 font-semibold uppercase whitespace-nowrap">
                                 <th class="py-3 px-4">Kode / Tanggal</th>
                                 <th class="py-3 px-4">Rincian Menu Diterima</th>
+                                <th class="py-3 px-4">Catatan Sales</th>
                                 <th class="py-3 px-4">Pengirim</th>
                                 <th class="py-3 px-4">Penerima</th>
                                 <th class="py-3 px-4">Status</th>
@@ -126,6 +147,17 @@
                                             @endforeach
                                         </div>
                                     </td>
+                                    <td class="py-3 px-4 max-w-xs">
+                                        @if ($rw->status === 'diterima' && $rw->catatan_penerimaan)
+                                            <span class="text-emerald-700 text-[11px] block"><b>Terima:</b>
+                                                {{ $rw->catatan_penerimaan }}</span>
+                                        @elseif ($rw->status === 'ditolak' && $rw->catatan_penolakan)
+                                            <span class="text-rose-700 text-[11px] block"><b>Alasan Ditolak:</b>
+                                                {{ $rw->catatan_penolakan }}</span>
+                                        @else
+                                            <span class="text-gray-400 text-[11px]">-</span>
+                                        @endif
+                                    </td>
                                     <td class="py-3 px-4 text-gray-600 whitespace-nowrap">
                                         {{ $rw->pengirim->name ?? '-' }}
                                     </td>
@@ -145,7 +177,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="py-8 text-center text-gray-400">Belum ada riwayat
+                                    <td colspan="6" class="py-8 text-center text-gray-400">Belum ada riwayat
                                         penerimaan stok.</td>
                                 </tr>
                             @endforelse

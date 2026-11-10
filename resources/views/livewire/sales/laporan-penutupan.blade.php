@@ -3,11 +3,24 @@
         <div class="max-w-3xl mx-auto space-y-6">
 
             <!-- Header -->
-            <div>
-                <h1 class="text-xl font-bold text-gray-800">Laporan Penutupan Shift Sales</h1>
-                <p class="text-xs text-gray-500">Rekonsiliasi stok fisik, rincian omzet, dan setoran harian.</p>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h1 class="text-xl font-bold text-gray-800">Laporan Penutupan Shift Sales</h1>
+                    <p class="text-xs text-gray-500">Rekonsiliasi stok fisik, rincian omzet, dan setoran harian.</p>
+                </div>
+                @if ($isLocked)
+                    <div
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-100 text-rose-800 rounded-xl text-xs font-bold shrink-0 border border-rose-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        Laporan Terkunci (Sudah Terkirim)
+                    </div>
+                @endif
             </div>
 
+            <!-- Flash Alert -->
             @if (session()->has('message'))
                 <div class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-lg">
                     {{ session('message') }}
@@ -16,6 +29,23 @@
             @if (session()->has('error'))
                 <div class="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg">
                     {{ session('error') }}
+                </div>
+            @endif
+
+            <!-- Lock Banner Warning -->
+            @if ($isLocked)
+                <div
+                    class="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 text-amber-900 text-xs">
+                    <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                        <b>Perhatian:</b> Laporan shift tanggal {{ \Carbon\Carbon::parse($tanggal)->format('d M Y') }}
+                        telah dikirim dan berada dalam status <b>Read-Only</b>. Anda tidak dapat mengubah angka opname
+                        atau mengirim ulang laporan ini.
+                    </div>
                 </div>
             @endif
 
@@ -100,10 +130,11 @@
 
                 <!-- Section 2: Opname Fisik Cup Per Varian Menu -->
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-4">
-                    <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                    <div
+                        class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-2">
                         <h2 class="font-bold text-xs uppercase tracking-wider text-amber-600">2. Opname Fisik Cup Per
                             Menu</h2>
-                        <div class="flex gap-2">
+                        <div class="flex gap-2 flex-wrap items-center">
                             <span
                                 class="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-extrabold rounded-lg text-xs border border-emerald-200">
                                 Sisa Fisik: {{ $this->sisaStokFisikTotal }} Cup
@@ -112,35 +143,66 @@
                                 class="px-2.5 py-1 bg-rose-50 text-rose-700 font-extrabold rounded-lg text-xs border border-rose-200">
                                 Rusak/Tumpah: {{ $this->stokRusakTotal }} Cup
                             </span>
+
+                            <!-- Discrepancy Badge -->
+                            @if ($this->selisihCup === 0)
+                                <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-black rounded-lg text-xs">
+                                    ✓ Stok Pas (0 Selisih)
+                                </span>
+                            @elseif ($this->selisihCup > 0)
+                                <span
+                                    class="px-2.5 py-1 bg-rose-100 text-rose-800 font-black rounded-lg text-xs animate-pulse">
+                                    ⚠ Ada Selisih {{ $this->selisihCup }} Cup
+                                </span>
+                            @else
+                                <span class="px-2.5 py-1 bg-amber-100 text-amber-800 font-black rounded-lg text-xs">
+                                    ⚠ Fisik Lebih {{ abs($this->selisihCup) }} Cup
+                                </span>
+                            @endif
                         </div>
                     </div>
 
                     <div class="space-y-3">
-                        <p class="text-xs text-gray-500">Hitung sisa cup fisik siap jual dan cup rusak/tumpah untuk
-                            setiap varian menu:</p>
+                        <p class="text-xs text-gray-500">Nilai Sisa Stok Sekarang otomatis terisi sesuai sisa stok di
+                            lapak. Sesuaikan jika ada perbedaan fisik:</p>
 
                         @forelse ($stokLapaks as $stok)
+                            @php
+                                $pId = $stok->produk_id;
+                                $terjualMenu = $terjual_per_produk[$pId] ?? 0;
+                                $stokSebelumTerjual = $stok->jumlah_stok + $terjualMenu;
+                            @endphp
                             <div
                                 class="p-3 bg-gray-50/70 border border-gray-100 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                                <div>
+                                <div class="space-y-1">
                                     <span
                                         class="font-bold text-gray-800 block text-sm">{{ $stok->produk->nama_produk ?? 'Produk' }}</span>
-                                    <span class="text-gray-400 text-[11px]">{{ $stok->produk->kategori }}</span>
+                                    <div class="flex items-center gap-2 text-[11px] flex-wrap">
+                                        <span class="px-2 py-0.5 bg-gray-200/70 text-gray-700 font-semibold rounded">
+                                            Stok Sebelum Terjual: <b
+                                                class="text-gray-900">{{ $stokSebelumTerjual }}</b> cup
+                                        </span>
+                                        <span class="px-2 py-0.5 bg-amber-100 text-amber-800 font-semibold rounded">
+                                            Terjual (Sistem): <b class="text-amber-700">{{ $terjualMenu }}</b> cup
+                                        </span>
+                                    </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2 w-full sm:w-auto">
                                     <div>
-                                        <label class="block text-[10px] font-semibold text-gray-500 mb-0.5">Sisa Fisik
-                                            (Cup)</label>
+                                        <label class="block text-[10px] font-semibold text-gray-500 mb-0.5">Sisa Stok
+                                            Sekarang</label>
                                         <input type="number" min="0"
                                             wire:model.live="sisa_fisik_per_produk.{{ $stok->produk_id }}"
-                                            class="w-28 px-2.5 py-1.5 border rounded-lg text-xs font-bold text-gray-800 focus:ring-2 focus:ring-amber-500 bg-white">
+                                            placeholder="0" onfocus="this.select()" @disabled($isLocked)
+                                            class="w-28 px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-800 focus:ring-2 focus:ring-amber-500 bg-white disabled:bg-gray-100 disabled:text-gray-400">
                                     </div>
                                     <div>
                                         <label
                                             class="block text-[10px] font-semibold text-rose-500 mb-0.5">Rusak/Tumpah</label>
                                         <input type="number" min="0"
-                                            wire:model.live="rusak_per_produk.{{ $stok->produk_id }}"
-                                            class="w-28 px-2.5 py-1.5 border border-rose-200 rounded-lg text-xs font-bold text-rose-700 focus:ring-2 focus:ring-rose-500 bg-white">
+                                            wire:model.live="rusak_per_produk.{{ $stok->produk_id }}" placeholder="0"
+                                            onfocus="this.select()" @disabled($isLocked)
+                                            class="w-28 px-2.5 py-1.5 border border-rose-200 rounded-lg text-xs font-bold text-rose-700 focus:ring-2 focus:ring-rose-500 bg-white disabled:bg-gray-100 disabled:text-gray-400">
                                     </div>
                                 </div>
                             </div>
@@ -155,15 +217,16 @@
                         <label class="block font-medium text-gray-700 mb-1 text-xs">Keterangan Cup Rusak / Tumpah
                             (Opsional)</label>
                         <input type="text" wire:model="alasan_stok_rusak"
-                            placeholder="Contoh: 1 cup Matcha pecah saat peracikan"
-                            class="w-full px-3 py-2 border rounded-lg text-xs focus:ring-2 focus:ring-amber-500">
+                            placeholder="Contoh: 1 cup Matcha pecah saat peracikan" @disabled($isLocked)
+                            class="w-full px-3 py-2 border rounded-lg text-xs focus:ring-2 focus:ring-amber-500 bg-white disabled:bg-gray-100 disabled:text-gray-400">
                     </div>
                 </div>
 
                 <!-- Section 3: Pengeluaran Operasional Lapak -->
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-4">
                     <h2 class="font-bold text-xs uppercase tracking-wider text-amber-600 border-b border-gray-100 pb-2">
-                        3. Pengeluaran Operasional Lapak</h2>
+                        3. Pengeluaran Operasional Lapak
+                    </h2>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                         <div
@@ -172,17 +235,35 @@
                                 <span class="text-amber-800 font-bold block">Uang Makan Staff</span>
                                 <span class="text-[10px] text-amber-600 italic">Ditentukan Management</span>
                             </div>
-                            <span class="font-black text-amber-700 text-sm">Rp
-                                {{ number_format($uang_makan, 0, ',', '.') }}</span>
+                            <span class="font-black text-amber-700 text-sm">
+                                Rp {{ number_format($uang_makan, 0, ',', '.') }}
+                            </span>
                         </div>
 
-                        <div
-                            class="p-3 bg-amber-50/60 border border-amber-200/60 rounded-lg flex justify-between items-center">
-                            <div>
-                                <span class="text-amber-800 font-bold block">Jatah Minum Staff</span>
-                                <span class="text-[10px] text-amber-600 italic">Ditentukan Management</span>
+                        <div class="p-3 bg-amber-50/60 border border-amber-200/60 rounded-lg space-y-2">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="text-amber-800 font-bold block">Jatah Minum Staff (1 Cup)</span>
+                                    <span class="text-[10px] text-amber-600 italic">Pilih Varian Diminum</span>
+                                </div>
+                                <span class="font-black text-amber-700 text-sm">
+                                    Rp {{ number_format($nominal_jatah_minum, 0, ',', '.') }}
+                                </span>
                             </div>
-                            <span class="font-black text-amber-700 text-sm">{{ $jatah_minum_cup }} Cup</span>
+
+                            <select wire:model.live="jatah_minum_produk_id" @disabled($isLocked)
+                                class="w-full px-2.5 py-1.5 border border-amber-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-amber-500 disabled:bg-gray-100">
+                                <option value="">-- Pilih Varian Minuman Staff --</option>
+                                @foreach ($stokLapaks as $stok)
+                                    <option value="{{ $stok->produk_id }}">
+                                        {{ $stok->produk->nama_produk ?? 'Produk' }} (Rp
+                                        {{ number_format($stok->produk->harga_jual ?? 0, 0, ',', '.') }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('jatah_minum_produk_id')
+                                <span class="text-rose-500 text-[10px] block">{{ $message }}</span>
+                            @enderror
                         </div>
                     </div>
 
@@ -190,23 +271,26 @@
                         <label class="block font-bold text-gray-800 text-xs">Pengeluaran Lainnya (Beli Es Batu, Parkir,
                             dll):</label>
 
-                        <div class="flex flex-col sm:flex-row gap-2">
-                            <input type="text" wire:model="nama_item_input"
-                                placeholder="Nama pengeluaran (misal: Beli Es Batu)"
-                                class="flex-1 px-3 py-2 border rounded-lg text-xs focus:ring-2 focus:ring-amber-500 bg-white">
-                            <input type="number" wire:model="nominal_item_input" placeholder="Nominal (Rp)"
-                                class="w-full sm:w-36 px-3 py-2 border rounded-lg text-xs focus:ring-2 focus:ring-amber-500 bg-white">
-                            <button type="button" wire:click="tambahPengeluaran"
-                                class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg transition shadow-sm whitespace-nowrap">
-                                + Tambah
-                            </button>
-                        </div>
-                        @error('nama_item_input')
-                            <span class="text-rose-500 text-[11px] block">{{ $message }}</span>
-                        @enderror
-                        @error('nominal_item_input')
-                            <span class="text-rose-500 text-[11px] block">{{ $message }}</span>
-                        @enderror
+                        @if (!$isLocked)
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <input type="text" wire:model="nama_item_input"
+                                    placeholder="Nama pengeluaran (misal: Beli Es Batu)"
+                                    class="flex-1 px-3 py-2 border rounded-lg text-xs focus:ring-2 focus:ring-amber-500 bg-white">
+                                <input type="number" wire:model="nominal_item_input" placeholder="Nominal (Rp)"
+                                    onfocus="this.select()"
+                                    class="w-full sm:w-36 px-3 py-2 border rounded-lg text-xs focus:ring-2 focus:ring-amber-500 bg-white">
+                                <button type="button" wire:click="tambahPengeluaran"
+                                    class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg transition shadow-sm whitespace-nowrap">
+                                    + Tambah
+                                </button>
+                            </div>
+                            @error('nama_item_input')
+                                <span class="text-rose-500 text-[11px] block">{{ $message }}</span>
+                            @enderror
+                            @error('nominal_item_input')
+                                <span class="text-rose-500 text-[11px] block">{{ $message }}</span>
+                            @enderror
+                        @endif
 
                         <div class="border border-gray-100 rounded-lg overflow-hidden mt-3">
                             <table class="w-full text-left text-xs">
@@ -215,27 +299,34 @@
                                         class="bg-gray-50 border-b border-gray-100 text-gray-500 font-semibold uppercase">
                                         <th class="py-2 px-3">Detail Pengeluaran</th>
                                         <th class="py-2 px-3">Nominal</th>
-                                        <th class="py-2 px-3 text-center">Aksi</th>
+                                        @if (!$isLocked)
+                                            <th class="py-2 px-3 text-center">Aksi</th>
+                                        @endif
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 text-gray-700">
                                     @forelse ($item_pengeluaran as $index => $item)
                                         <tr class="hover:bg-gray-50/50">
                                             <td class="py-2 px-3 font-semibold text-gray-800">{{ $item['nama'] }}</td>
-                                            <td class="py-2 px-3 font-bold text-amber-600">Rp
-                                                {{ number_format($item['nominal'], 0, ',', '.') }}</td>
-                                            <td class="py-2 px-3 text-center">
-                                                <button type="button"
-                                                    wire:click="hapusPengeluaran({{ $index }})"
-                                                    class="text-rose-600 hover:text-rose-800 font-bold text-[11px]">
-                                                    Hapus
-                                                </button>
+                                            <td class="py-2 px-3 font-bold text-amber-600">
+                                                Rp {{ number_format($item['nominal'], 0, ',', '.') }}
                                             </td>
+                                            @if (!$isLocked)
+                                                <td class="py-2 px-3 text-center">
+                                                    <button type="button"
+                                                        wire:click="hapusPengeluaran({{ $index }})"
+                                                        class="text-rose-600 hover:text-rose-800 font-bold text-[11px]">
+                                                        Hapus
+                                                    </button>
+                                                </td>
+                                            @endif
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="3" class="py-4 text-center text-gray-400 italic">Belum ada
-                                                pengeluaran lain yang ditambahkan.</td>
+                                            <td colspan="{{ $isLocked ? '2' : '3' }}"
+                                                class="py-4 text-center text-gray-400 italic">
+                                                Belum ada pengeluaran lain yang ditambahkan.
+                                            </td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -243,8 +334,10 @@
                                     <tfoot>
                                         <tr class="bg-amber-50/50 font-bold text-gray-800 border-t border-amber-100">
                                             <td class="py-2.5 px-3">Total Pengeluaran Lain:</td>
-                                            <td colspan="2" class="py-2.5 px-3 text-amber-700 font-black">Rp
-                                                {{ number_format($this->pengeluaranLainTotal, 0, ',', '.') }}</td>
+                                            <td colspan="{{ $isLocked ? '1' : '2' }}"
+                                                class="py-2.5 px-3 text-amber-700 font-black">
+                                                Rp {{ number_format($this->pengeluaranLainTotal, 0, ',', '.') }}
+                                            </td>
                                         </tr>
                                     </tfoot>
                                 @endif
@@ -253,28 +346,48 @@
                     </div>
                 </div>
 
-                <!-- Section 4: Upload Bukti QRIS & Ringkasan Setoran -->
+                <!-- Section 4: Ringkasan Setoran Tunai Bersih -->
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3">
-                    <h2 class="font-bold text-xs uppercase tracking-wider text-amber-600">4. Upload Rekap QRIS &
-                        Setoran</h2>
-                    <div class="text-xs">
-                        <label class="block font-medium text-gray-700 mb-1">Upload Tangkapan Layar Rekap QRIS</label>
-                        <input type="file" wire:model="foto_qris"
-                            class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
-                    </div>
+                    <h2
+                        class="font-bold text-xs uppercase tracking-wider text-amber-600 border-b border-gray-100 pb-2">
+                        4. Ringkasan Setoran Tunai Bersih
+                    </h2>
 
                     <div
-                        class="p-4 bg-amber-50 border border-amber-200 rounded-xl flex justify-between items-center text-xs mt-3">
-                        <span class="font-bold text-amber-900">Total Uang Setoran Tunai Bersih:</span>
-                        <span class="text-lg font-extrabold text-amber-700">Rp
-                            {{ number_format($this->setoranBersih, 0, ',', '.') }}</span>
+                        class="p-4 bg-amber-50 border border-amber-200 rounded-xl flex justify-between items-center text-xs">
+                        <div>
+                            <span class="font-bold text-amber-900 block text-sm">Total Uang Setoran Tunai
+                                Bersih:</span>
+                            <span class="text-[11px] text-amber-700">Omzet Tunai dikurangi Uang Makan, Jatah Minum &
+                                Pengeluaran Lain</span>
+                        </div>
+                        <span class="text-xl font-extrabold text-amber-700">
+                            Rp {{ number_format($this->setoranBersih, 0, ',', '.') }}
+                        </span>
                     </div>
                 </div>
 
-                <button type="submit"
-                    class="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-md transition text-xs">
-                    Kirim Laporan Penutupan Shift
-                </button>
+                <!-- Submit Button -->
+                @if (!$isLocked)
+                    <button type="submit"
+                        wire:confirm="Yakin ingin mengirim laporan penutupan shift ini? Setelah dikirim data akan dikunci."
+                        class="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-md transition text-xs flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M5 13l4 4L19 7" />
+                        </svg>
+                        Kirim Laporan Penutupan Shift
+                    </button>
+                @else
+                    <button type="button" disabled
+                        class="w-full py-3 bg-gray-300 text-gray-500 font-bold rounded-xl cursor-not-allowed text-xs flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        Laporan Penutupan Hari Ini Terkunci
+                    </button>
+                @endif
             </form>
 
         </div>
