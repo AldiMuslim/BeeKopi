@@ -40,14 +40,16 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
                 <!-- Form Eksekusi Racik -->
                 <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
-                    <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                    <div class="flex flex-wrap justify-between items-center gap-2 border-b border-gray-100 pb-2">
                         <h2 class="font-bold text-xs uppercase tracking-wider text-amber-600">Eksekusi Peracikan Batch
                         </h2>
-                        @if ($produk_id && $maxBatchCapacity > 0)
-                            <span
-                                class="px-2.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-bold">
+                        @if ($produk_id)
+                            <button type="button" wire:click="gunakanKapasitasMaks"
+                                title="Klik untuk mengisi jumlah porsi sesuai kapasitas maksimal stok"
+                                class="px-2.5 py-0.5 {{ $maxBatchCapacity > 0 ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-200' }} border rounded-full text-[10px] font-bold transition">
                                 Kapasitas Stok: Maks {{ $maxBatchCapacity }} Cup
-                            </span>
+                                {{ $maxBatchCapacity > 0 ? '(Pakai Maks)' : '' }}
+                            </button>
                         @endif
                     </div>
 
@@ -55,11 +57,12 @@
                         <div>
                             <label class="block font-bold text-gray-700 mb-1">Pilih Varian Produk:</label>
                             <select wire:model.live="produk_id"
-                                class="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-amber-500 bg-white font-bold text-gray-800">
+                                class="w-full pl-3.5 pr-9 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-amber-500 bg-white font-bold text-gray-800 cursor-pointer">
                                 <option value="">-- Pilih Varian Produk --</option>
                                 @foreach ($produks as $p)
-                                    <option value="{{ $p->id }}">{{ $p->nama_produk }} (Stok Ready:
-                                        {{ $p->stok_pusat ?? 0 }} Cup)</option>
+                                    <option value="{{ $p->id }}">
+                                        {{ $p->nama_produk }} (Stok Ready: {{ $p->stok_pusat ?? 0 }} Cup)
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
@@ -71,8 +74,8 @@
                         </div>
 
                         <button wire:click="prosesRacik" wire:loading.attr="disabled"
-                            @if (!$produk_id || !$stokCukup) disabled @endif
-                            class="w-full py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold rounded-xl transition shadow-sm text-xs flex items-center justify-center gap-2">
+                            @if (!$produk_id || !$stokCukup || (int) $jumlah_cup < 1) disabled @endif
+                            class="w-full py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition shadow-sm text-xs flex items-center justify-center gap-2">
                             <span wire:loading.remove wire:target="prosesRacik">Proses Peracikan & Auto-Deduct
                                 Stok</span>
                             <span wire:loading wire:target="prosesRacik" class="flex items-center gap-1.5">
@@ -92,7 +95,8 @@
                 <!-- Preview Kebutuhan Bahan -->
                 <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-3">
                     <h2 class="font-bold text-xs uppercase tracking-wider text-amber-600 border-b border-gray-100 pb-2">
-                        Kebutuhan Bahan Baku Mentah</h2>
+                        Kebutuhan Bahan Baku Mentah
+                    </h2>
 
                     @if (!empty($previewBahan))
                         <div
@@ -104,7 +108,8 @@
                                         <p class="text-gray-400 text-[10px]">Stok Gudang: {{ $item['stok_text'] }}</p>
                                     </div>
                                     <div class="text-right">
-                                        <p class="font-black {{ $item['cukup'] ? 'text-amber-600' : 'text-rose-600' }}">
+                                        <p
+                                            class="font-black {{ $item['cukup'] ? 'text-amber-600' : 'text-rose-600' }}">
                                             -{{ $item['kebutuhan_text'] }}
                                         </p>
                                         @if (!$item['cukup'])
@@ -158,10 +163,13 @@
                             @forelse ($produks as $p)
                                 <tr class="hover:bg-gray-50/50">
                                     <td class="py-3.5 px-4 font-bold text-gray-900 whitespace-nowrap">
-                                        {{ $p->nama_produk }}</td>
+                                        {{ $p->nama_produk }}
+                                    </td>
                                     <td class="py-3.5 px-4 whitespace-nowrap">
                                         <span
-                                            class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-semibold">{{ $p->kategori }}</span>
+                                            class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-semibold">
+                                            {{ $p->kategori }}
+                                        </span>
                                     </td>
                                     <td class="py-3.5 px-4 whitespace-nowrap">
                                         <span
@@ -173,7 +181,7 @@
                                         Rp {{ number_format($p->hpp ?? 0, 0, ',', '.') }}
                                     </td>
                                     <td class="py-3.5 px-4 font-extrabold text-amber-600 whitespace-nowrap">
-                                        Rp {{ number_format($p->harga_jual, 0, ',', '.') }}
+                                        Rp {{ number_format($p->harga_jual ?? ($p->harga ?? 0), 0, ',', '.') }}
                                     </td>
                                     <td class="py-3.5 px-4">
                                         <div class="flex flex-wrap gap-1.5 max-w-md">
@@ -181,7 +189,7 @@
                                                 <span
                                                     class="inline-flex items-center px-2 py-1 bg-amber-50 text-amber-800 rounded border border-amber-100 text-[10px] whitespace-nowrap">
                                                     {{ $r->bahanBaku->nama_bahan ?? '-' }}:
-                                                    &nbsp;<b>{{ $this->formatSatuan($r->takaran_per_cup, $r->satuan) }}</b>
+                                                    &nbsp;<b>{{ $this->formatSatuan($r->takaran_per_cup ?? ($r->jumlah_takaran ?? 0), $r->satuan ?? 'gram') }}</b>
                                                 </span>
                                             @empty
                                                 <span class="text-rose-500 italic text-[10px] font-bold">Belum ada
@@ -190,16 +198,23 @@
                                         </div>
                                     </td>
                                     <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                                        <button wire:click="openModalEdit({{ $p->id }})"
-                                            class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold text-[11px] transition">
-                                            Edit Resep
-                                        </button>
+                                        <div class="flex items-center justify-center gap-1.5">
+                                            <button wire:click="pilihUntukRacik({{ $p->id }})"
+                                                class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg font-bold text-[11px] transition">
+                                                Pilih Racik
+                                            </button>
+                                            <button wire:click="openModalEdit({{ $p->id }})"
+                                                class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold text-[11px] transition">
+                                                Edit Resep
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="py-8 text-center text-gray-400 italic">Belum ada varian
-                                        produk yang cocok.</td>
+                                    <td colspan="7" class="py-8 text-center text-gray-400 italic">
+                                        Belum ada varian produk yang cocok.
+                                    </td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -230,20 +245,25 @@
                             @forelse ($historiPeracikan as $log)
                                 <tr class="hover:bg-gray-50/50">
                                     <td class="py-3 px-4 text-gray-500 whitespace-nowrap">
-                                        {{ $log->created_at->format('d M Y, H:i') }}</td>
+                                        {{ $log->created_at->format('d M Y, H:i') }}
+                                    </td>
                                     <td class="py-3 px-4 font-bold text-gray-900 whitespace-nowrap">
-                                        {{ $log->bahanBaku->nama_bahan ?? '-' }}</td>
+                                        {{ $log->bahanBaku->nama_bahan ?? '-' }}
+                                    </td>
                                     <td class="py-3 px-4 font-black text-rose-600 whitespace-nowrap">
-                                        -{{ number_format($log->jumlah, 2, ',', '.') }} {{ $log->satuan }}
+                                        -{{ number_format($log->jumlah, $log->jumlah == floor($log->jumlah) ? 0 : 2, ',', '.') }}
+                                        {{ $log->satuan }}
                                     </td>
                                     <td class="py-3 px-4 text-gray-600 font-semibold">{{ $log->keterangan }}</td>
                                     <td class="py-3 px-4 font-semibold text-gray-800 whitespace-nowrap">
-                                        {{ $log->user->name ?? 'System' }}</td>
+                                        {{ $log->user->name ?? 'System' }}
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="py-6 text-center text-gray-400 italic">Belum ada riwayat
-                                        peracikan batch.</td>
+                                    <td colspan="5" class="py-6 text-center text-gray-400 italic">
+                                        Belum ada riwayat peracikan batch.
+                                    </td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -253,6 +273,11 @@
 
             <!-- MODAL FORM VARIAN & RESEP DINAMIS -->
             @if ($showModalVarian)
+                @php
+                    $estimasiHppModal = $this->estimasiHppModal;
+                    $hargaJualModal = (float) $harga_jual;
+                    $marginModal = $hargaJualModal - $estimasiHppModal;
+                @endphp
                 <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div
                         class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-150">
@@ -279,7 +304,7 @@
                             <div>
                                 <label class="block font-bold text-gray-700 mb-1">Kategori:</label>
                                 <select wire:model="kategori"
-                                    class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white font-semibold">
+                                    class="w-full pl-3 pr-8 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white font-semibold">
                                     <option value="Kopi">Kopi</option>
                                     <option value="Non-Kopi">Non-Kopi</option>
                                     <option value="Snack">Snack</option>
@@ -291,54 +316,74 @@
                             </div>
                             <div>
                                 <label class="block font-bold text-gray-700 mb-1">Harga Jual (Rp):</label>
-                                <input type="number" wire:model="harga_jual" placeholder="15000"
+                                <input type="number" wire:model.live="harga_jual" placeholder="15000"
                                     class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white font-bold text-amber-700">
                                 @error('harga_jual')
                                     <span
                                         class="text-rose-500 text-[11px] block mt-0.5 font-semibold">{{ $message }}</span>
                                 @enderror
                             </div>
+                            <div
+                                class="sm:col-span-2 flex items-center justify-between p-2.5 bg-amber-50/70 border border-amber-200 rounded-xl mt-auto">
+                                <div>
+                                    <span class="text-[10px] font-bold text-gray-500 uppercase block">Estimasi HPP /
+                                        Cup</span>
+                                    <span class="font-black text-amber-800 text-sm">Rp
+                                        {{ number_format($estimasiHppModal, 0, ',', '.') }}</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-[10px] font-bold text-gray-500 uppercase block">Estimasi
+                                        Margin</span>
+                                    <span
+                                        class="font-black {{ $marginModal >= 0 ? 'text-emerald-600' : 'text-rose-600' }} text-sm">
+                                        Rp {{ number_format($marginModal, 0, ',', '.') }}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Input Komposisi Resep Dinamis -->
                         <div class="pt-3 border-t border-gray-100 space-y-3">
                             <div class="flex justify-between items-center">
-                                <label class="font-bold text-xs uppercase tracking-wider text-amber-600">Komposisi
-                                    Takaran (per 1 Cup)</label>
+                                <label class="font-bold text-xs uppercase tracking-wider text-amber-600">
+                                    Komposisi Takaran (per 1 Cup)
+                                </label>
                                 <button type="button" wire:click="tambahRowKomposisi"
                                     class="text-xs text-amber-600 font-bold hover:underline">+ Tambah Bahan</button>
                             </div>
 
                             @foreach ($komposisi as $index => $row)
-                                <div class="flex items-center gap-2 text-xs">
+                                <div class="flex items-start gap-2 text-xs">
                                     <div class="flex-1">
-                                        <select wire:model="komposisi.{{ $index }}.bahan_baku_id"
-                                            class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white font-medium">
+                                        <select wire:model.live="komposisi.{{ $index }}.bahan_baku_id"
+                                            class="w-full pl-3 pr-8 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white font-medium">
                                             <option value="">-- Pilih Bahan Baku --</option>
                                             @foreach ($allBahanBaku as $bb)
-                                                <option value="{{ $bb->id }}">{{ $bb->nama_bahan }} (Stok:
+                                                <option value="{{ $bb->id }}">
+                                                    {{ $bb->nama_bahan }} (Stok:
                                                     {{ number_format($bb->stok_sekarang, 2, ',', '.') }}
-                                                    {{ $bb->satuan }})</option>
+                                                    {{ $bb->satuan }})
+                                                </option>
                                             @endforeach
                                         </select>
                                         @error("komposisi.{$index}.bahan_baku_id")
                                             <span
-                                                class="text-[10px] text-rose-500 block font-semibold">{{ $message }}</span>
+                                                class="text-[10px] text-rose-500 block font-semibold mt-0.5">{{ $message }}</span>
                                         @enderror
                                     </div>
                                     <div class="w-28">
                                         <input type="number" step="0.01"
-                                            wire:model="komposisi.{{ $index }}.takaran_per_cup"
+                                            wire:model.live="komposisi.{{ $index }}.takaran_per_cup"
                                             placeholder="Takaran"
                                             class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white font-bold">
                                         @error("komposisi.{$index}.takaran_per_cup")
                                             <span
-                                                class="text-[10px] text-rose-500 block font-semibold">{{ $message }}</span>
+                                                class="text-[10px] text-rose-500 block font-semibold mt-0.5">{{ $message }}</span>
                                         @enderror
                                     </div>
-                                    <div class="w-24">
-                                        <select wire:model="komposisi.{{ $index }}.satuan"
-                                            class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white font-semibold">
+                                    <div class="w-28">
+                                        <select wire:model.live="komposisi.{{ $index }}.satuan"
+                                            class="w-full pl-3 pr-8 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white font-semibold">
                                             <option value="gram">gram</option>
                                             <option value="ml">ml</option>
                                             <option value="pcs">pcs</option>
@@ -359,8 +404,9 @@
                                 class="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition">Batal</button>
                             <button type="button" wire:click="simpanVarian" wire:loading.attr="disabled"
                                 class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition shadow-sm disabled:opacity-50">
-                                <span wire:loading.remove
-                                    wire:target="simpanVarian">{{ $isEditMode ? 'Simpan Perubahan' : 'Tambah Varian' }}</span>
+                                <span wire:loading.remove wire:target="simpanVarian">
+                                    {{ $isEditMode ? 'Simpan Perubahan' : 'Tambah Varian' }}
+                                </span>
                                 <span wire:loading wire:target="simpanVarian">Kalkulasi & Menyimpan...</span>
                             </button>
                         </div>

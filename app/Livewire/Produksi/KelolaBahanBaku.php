@@ -4,8 +4,11 @@ namespace App\Livewire\Produksi;
 
 use App\Models\AuditLog;
 use App\Models\BahanBaku;
+use App\Models\Produk;
+use App\Models\Resep;
 use App\Models\RiwayatBahanBaku;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -15,16 +18,16 @@ class KelolaBahanBaku extends Component
 
     // Filter & Search Master Table
     public $search = '';
-    public $filter_stok = 'semua'; // 'semua', 'menipis'
+    public $filter_stok = 'semua'; // 'semua', 'aman', 'menipis'
 
     // State Form Master Bahan Baku
     public $showModalBahan = false;
     public $bahan_id = null;
     public $nama_bahan = '';
-    public $kategori = '';
+    public $kategori = 'Bahan Basah';
     public $stok_sekarang = 0;
     public $stok_minimum = 0;
-    public $satuan = '';
+    public $satuan = 'gram';
     public $harga_satuan = 0;
 
     // State Form Update Stok & Log
@@ -48,9 +51,90 @@ class KelolaBahanBaku extends Component
         $this->resetPage();
     }
 
+    /**
+     * Konversi nilai antar satuan untuk sinkronisasi HPP Resep
+     */
+    private function konversiNilaiStok($jumlah, $fromSatuan, $toSatuan): float
+    {
+        $from = strtolower(trim($fromSatuan ?? ''));
+        $to   = strtolower(trim($toSatuan ?? ''));
+
+        if ($from === $to || empty($from) || empty($to)) {
+            return (float) $jumlah;
+        }
+        if ($from === 'kg' && in_array($to, ['gram', 'gr', 'g'])) {
+            return (float) $jumlah * 1000;
+        }
+        if (in_array($from, ['gram', 'gr', 'g']) && $to === 'kg') {
+            return (float) $jumlah / 1000;
+        }
+        if (in_array($from, ['liter', 'l']) && $to === 'ml') {
+            return (float) $jumlah * 1000;
+        }
+        if ($from === 'ml' && in_array($to, ['liter', 'l'])) {
+            return (float) $jumlah / 1000;
+        }
+
+        return (float) $jumlah;
+    }
+
+    /**
+     * Sinkronisasi ulang nilai HPP pada semua produk yang menggunakan bahan baku ini
+     */
+    private function sinkronisasiHppProdukTerkait($bahanBakuId)
+    {
+        if (!Schema::hasColumn('produks', 'hpp')) {
+            return;
+        }
+
+        $produks = Produk::with('reseps.bahanBaku')
+            ->whereHas('reseps', fn($q) => $q->where('bahan_baku_id', $bahanBakuId))
+            ->get();
+
+        foreach ($produks as $produk) {
+            $totalHpp = 0;
+            foreach ($produk->reseps as $rsp) {
+                $bahan = $rsp->bahanBaku;
+                if (!$bahan) continue;
+
+                $hargaBahan  = (float) ($bahan->harga_satuan ?? 0);
+                $takaran     = (float) ($rsp->takaran_per_cup ?? $rsp->jumlah_takaran ?? 0);
+                $satuanResep = $rsp->satuan ?? $bahan->satuan;
+
+                if ($hargaBahan > 0 && $takaran > 0) {
+                    $takaranGudang = $this->konversiNilaiStok($takaran, $satuanResep, $bahan->satuan);
+                    $totalHpp += ($takaranGudang * $hargaBahan);
+                }
+            }
+
+            $produk->update(['hpp' => round($totalHpp)]);
+        }
+    }
+
+    /**
+     * Helper pencatatan Audit Log yang mendukung kolom keterangan jika tersedia
+     */
+    private function catatAudit($judul, $rincian = null)
+    {
+        $data = [
+            'user_id'   => auth()->id(),
+            'aktivitas' => $rincian && !Schema::hasColumn('audit_logs', 'keterangan')
+                ? "{$judul}: {$rincian}"
+                : $judul,
+        ];
+
+        if ($rincian && Schema::hasColumn('audit_logs', 'keterangan')) {
+            $data['keterangan'] = $rincian;
+        }
+
+        AuditLog::create($data);
+    }
+
     public function openModalBahan()
     {
-        $this->reset(['bahan_id', 'nama_bahan', 'kategori', 'stok_sekarang', 'stok_minimum', 'satuan', 'harga_satuan']);
+        $this->reset(['bahan_id', 'nama_bahan', 'stok_sekarang', 'stok_minimum', 'harga_satuan']);
+        $this->kategori = 'Bahan Basah';
+        $this->satuan = 'gram';
         $this->resetValidation();
         $this->showModalBahan = true;
     }
@@ -61,7 +145,7 @@ class KelolaBahanBaku extends Component
         $bahan = BahanBaku::findOrFail($id);
         $this->bahan_id = $bahan->id;
         $this->nama_bahan = $bahan->nama_bahan;
-        $this->kategori = $bahan->kategori;
+        $this->kategori = $bahan->kategori ?? 'Bahan Basah';
         $this->stok_sekarang = $bahan->stok_sekarang;
         $this->stok_minimum = $bahan->stok_minimum;
         $this->satuan = $bahan->satuan;
@@ -73,7 +157,7 @@ class KelolaBahanBaku extends Component
     public function simpanBahan()
     {
         $this->validate([
-            'nama_bahan'    => 'required|string|max:255',
+            'nama_bahan'    => 'required|string|max:255|unique:bahan_bakus,nama_bahan,' . $this->bahan_id,
             'kategori'      => 'required|string|max:255',
             'stok_sekarang' => 'required|numeric|min:0',
             'stok_minimum'  => 'required|numeric|min:0',
@@ -81,26 +165,46 @@ class KelolaBahanBaku extends Component
             'harga_satuan'  => 'required|numeric|min:0',
         ]);
 
-        BahanBaku::updateOrCreate(
-            ['id' => $this->bahan_id],
-            [
-                'nama_bahan'    => $this->nama_bahan,
-                'kategori'      => $this->kategori,
-                'stok_sekarang' => $this->stok_sekarang,
-                'stok_minimum'  => $this->stok_minimum,
-                'satuan'        => $this->satuan,
-                'harga_satuan'  => $this->harga_satuan,
-            ]
-        );
+        $isEdit = (bool) $this->bahan_id;
 
-        AuditLog::create([
-            'user_id'   => auth()->id(),
-            'aktivitas' => $this->bahan_id
-                ? "Memperbarui master bahan baku: {$this->nama_bahan}"
-                : "Menambah master bahan baku baru: {$this->nama_bahan}",
-        ]);
+        DB::transaction(function () use ($isEdit) {
+            $data = [
+                'nama_bahan'   => $this->nama_bahan,
+                'kategori'     => $this->kategori,
+                'stok_minimum' => $this->stok_minimum,
+                'satuan'       => $this->satuan,
+                'harga_satuan' => $this->harga_satuan,
+            ];
 
-        session()->flash('message', $this->bahan_id ? 'Bahan baku berhasil diperbarui!' : 'Bahan baku baru berhasil ditambahkan!');
+            // Jika tambah bahan baru, set stok awal (dan catat riwayat stok awal jika > 0)
+            if (!$isEdit) {
+                $data['stok_sekarang'] = $this->stok_sekarang;
+            }
+
+            $bahan = BahanBaku::updateOrCreate(['id' => $this->bahan_id], $data);
+
+            if (!$isEdit && (float) $this->stok_sekarang > 0) {
+                RiwayatBahanBaku::create([
+                    'bahan_baku_id' => $bahan->id,
+                    'user_id'       => auth()->id(),
+                    'jenis'         => 'masuk',
+                    'jumlah'        => (float) $this->stok_sekarang,
+                    'satuan'        => $bahan->satuan,
+                    'total_biaya'   => (float) $this->stok_sekarang * (float) $this->harga_satuan,
+                    'keterangan'    => 'Stok Awal Pendaftaran Bahan Baru',
+                ]);
+            }
+
+            // Sinkronisasi HPP Produk yang menggunakan bahan ini
+            $this->sinkronisasiHppProdukTerkait($bahan->id);
+
+            $this->catatAudit(
+                $isEdit ? 'Update Master Bahan Gudang' : 'Tambah Bahan Baku Baru',
+                ($isEdit ? 'Memperbarui' : 'Menambahkan') . " master bahan baku: {$this->nama_bahan} (Harga: Rp " . number_format((float) $this->harga_satuan, 0, ',', '.') . "/{$this->satuan})"
+            );
+        });
+
+        session()->flash('message', $isEdit ? 'Master bahan baku & HPP resep berhasil diperbarui!' : 'Bahan baku baru berhasil ditambahkan!');
         $this->showModalBahan = false;
     }
 
@@ -108,7 +212,13 @@ class KelolaBahanBaku extends Component
     {
         $bahan = BahanBaku::findOrFail($id);
 
-        // Check Integrity Limit
+        // 1. Cek apakah masih digunakan di Resep Produk
+        if (Schema::hasTable('reseps') && Resep::where('bahan_baku_id', $id)->exists()) {
+            session()->flash('error', "Gagal! Bahan '{$bahan->nama_bahan}' masih digunakan aktif dalam komposisi Resep Produk.");
+            return;
+        }
+
+        // 2. Cek apakah sudah memiliki histori transaksi stok
         $hasLogs = RiwayatBahanBaku::where('bahan_baku_id', $id)->exists();
         if ($hasLogs) {
             session()->flash('error', "Bahan '{$bahan->nama_bahan}' memiliki histori riwayat transaksi stok dan tidak dapat dihapus permanen demi integritas audit.");
@@ -118,10 +228,7 @@ class KelolaBahanBaku extends Component
         $nama = $bahan->nama_bahan;
         $bahan->delete();
 
-        AuditLog::create([
-            'user_id'   => auth()->id(),
-            'aktivitas' => "Menghapus master bahan baku: {$nama}",
-        ]);
+        $this->catatAudit('Hapus Master Bahan Baku', "Menghapus master bahan baku: {$nama}");
 
         session()->flash('message', "Bahan baku '{$nama}' telah dihapus.");
     }
@@ -139,6 +246,7 @@ class KelolaBahanBaku extends Component
 
     public function updatedJenisPenyesuaian($val)
     {
+        $this->resetValidation();
         if ($val === 'belanja' && $this->selectedBahan) {
             $this->harga_beli_satuan = $this->selectedBahan->harga_satuan;
         }
@@ -149,14 +257,18 @@ class KelolaBahanBaku extends Component
         $rules = [
             'jenis_penyesuaian' => 'required|in:belanja,pemakaian,rusak',
             'jumlah_jumlah'     => 'required|numeric|min:0.01',
-            'keterangan'        => 'nullable|string|max:255',
+            'keterangan'        => $this->jenis_penyesuaian === 'rusak'
+                ? 'required|string|max:255'
+                : 'nullable|string|max:255',
         ];
 
         if ($this->jenis_penyesuaian === 'belanja') {
             $rules['harga_beli_satuan'] = 'required|numeric|min:0';
         }
 
-        $this->validate($rules);
+        $this->validate($rules, [
+            'keterangan.required' => 'Alasan wajib diisi untuk pencatatan bahan rusak / tumpah / kadaluarsa (waste).',
+        ]);
 
         try {
             DB::transaction(function () {
@@ -169,8 +281,9 @@ class KelolaBahanBaku extends Component
 
                     // 1. Tambah Stok & Update Harga Satuan Master jika berubah
                     $bahan->increment('stok_sekarang', $jumlah);
-                    if ($bahan->harga_satuan != $hargaBeli) {
+                    if ((float) $bahan->harga_satuan !== $hargaBeli && $hargaBeli > 0) {
                         $bahan->update(['harga_satuan' => $hargaBeli]);
+                        $this->sinkronisasiHppProdukTerkait($bahan->id);
                     }
 
                     // 2. Simpan Log Belanja (+ In)
@@ -184,22 +297,24 @@ class KelolaBahanBaku extends Component
                         'keterangan'    => $this->keterangan ?: 'Restok Belanja Harian',
                     ]);
 
-                    AuditLog::create([
-                        'user_id'   => auth()->id(),
-                        'aktivitas' => "Input belanja bahan: {$bahan->nama_bahan} (+{$jumlah} {$bahan->satuan} @ Rp " . number_format($hargaBeli, 0, ',', '.') . ")",
-                    ]);
+                    $this->catatAudit(
+                        'Belanja Bahan Baku Gudang',
+                        "Input belanja bahan: {$bahan->nama_bahan} (+{$jumlah} {$bahan->satuan} @ Rp " . number_format($hargaBeli, 0, ',', '.') . ", Total: Rp " . number_format($totalBiaya, 0, ',', '.') . ")"
+                    );
 
                     session()->flash('message', "Berhasil menambah stok {$bahan->nama_bahan} (+{$jumlah} {$bahan->satuan})!");
                 } else {
                     // Penyesuaian Pemakaian / Rusak (- Out)
-                    if ($bahan->stok_sekarang < $jumlah) {
+                    if ((float) $bahan->stok_sekarang < $jumlah) {
                         throw new \Exception("Stok {$bahan->nama_bahan} tidak mencukupi untuk dikurangi! (Tersedia: {$bahan->stok_sekarang} {$bahan->satuan})");
                     }
 
                     // 1. Potong Stok Bahan
                     $bahan->decrement('stok_sekarang', $jumlah);
 
-                    $defaultKeterangan = $this->jenis_penyesuaian === 'rusak' ? 'Bahan Rusak / Waste' : 'Pemakaian Manual Produksi';
+                    $defaultKeterangan = $this->jenis_penyesuaian === 'rusak'
+                        ? 'Bahan Rusak / Waste'
+                        : 'Pemakaian Manual Produksi';
 
                     // 2. Simpan Log Pemakaian (- Out)
                     RiwayatBahanBaku::create([
@@ -212,10 +327,14 @@ class KelolaBahanBaku extends Component
                         'keterangan'    => $this->keterangan ?: $defaultKeterangan,
                     ]);
 
-                    AuditLog::create([
-                        'user_id'   => auth()->id(),
-                        'aktivitas' => "Pencatatan {$this->jenis_penyesuaian}: {$bahan->nama_bahan} (-{$jumlah} {$bahan->satuan})",
-                    ]);
+                    $judulAudit = $this->jenis_penyesuaian === 'rusak'
+                        ? 'Pencatatan Bahan Rusak (Waste)'
+                        : 'Pemakaian Manual Bahan Baku';
+
+                    $this->catatAudit(
+                        $judulAudit,
+                        "{$bahan->nama_bahan} (-{$jumlah} {$bahan->satuan}) - Catatan: " . ($this->keterangan ?: $defaultKeterangan)
+                    );
 
                     session()->flash('message', "Berhasil mengurangi stok {$bahan->nama_bahan} (-{$jumlah} {$bahan->satuan})!");
                 }
@@ -231,7 +350,7 @@ class KelolaBahanBaku extends Component
     public function render()
     {
         // Counter Ringkasan Stok
-        $totalBahan  = BahanBaku::count();
+        $totalBahan   = BahanBaku::count();
         $countMenipis = BahanBaku::whereColumn('stok_sekarang', '<=', 'stok_minimum')->count();
         $countAman    = $totalBahan - $countMenipis;
 
@@ -246,10 +365,13 @@ class KelolaBahanBaku extends Component
             ->when($this->filter_stok === 'menipis', function ($q) {
                 $q->whereColumn('stok_sekarang', '<=', 'stok_minimum');
             })
+            ->when($this->filter_stok === 'aman', function ($q) {
+                $q->whereColumn('stok_sekarang', '>', 'stok_minimum');
+            })
             ->latest()
             ->paginate(10);
 
-        // Log Transaksi (Paginated / Limited)
+        // Log Transaksi (Limited 25 terbaru)
         $logPemakaian = RiwayatBahanBaku::with(['bahanBaku', 'user'])
             ->where('jenis', 'keluar')
             ->latest()

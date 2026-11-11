@@ -6,8 +6,8 @@
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 class="text-xl font-bold text-gray-800">Manajemen Armada Lapak</h1>
-                    <p class="text-xs text-gray-500">Atur titik lokasi cabang, pemetaan sales, dan status operasional
-                        armada jualan Bee Kopi.</p>
+                    <p class="text-xs text-gray-500">Atur titik lokasi cabang, pemetaan tim sales dua arah, dan status
+                        operasional armada jualan Bee Kopi.</p>
                 </div>
                 <button wire:click="openModalLapak"
                     class="inline-flex items-center justify-center px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-sm transition">
@@ -15,13 +15,21 @@
                 </button>
             </div>
 
-            <!-- Flash Alert -->
+            <!-- Flash Alert Notifications -->
             @if (session()->has('message'))
                 <div
                     class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-xl font-semibold flex justify-between items-center shadow-sm">
                     <span>{{ session('message') }}</span>
                     <button type="button" onclick="this.parentElement.remove()"
                         class="text-emerald-900 font-bold">&times;</button>
+                </div>
+            @endif
+            @if (session()->has('error'))
+                <div
+                    class="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-semibold flex justify-between items-center shadow-sm">
+                    <span>{{ session('error') }}</span>
+                    <button type="button" onclick="this.parentElement.remove()"
+                        class="text-rose-900 font-bold">&times;</button>
                 </div>
             @endif
 
@@ -34,7 +42,7 @@
                         class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-amber-500 bg-white">
                 </div>
 
-                <div class="flex items-center gap-1.5 text-xs w-full sm:w-auto">
+                <div class="flex flex-wrap items-center gap-1.5 text-xs w-full sm:w-auto">
                     <span class="text-gray-400 font-medium mr-1">Status:</span>
                     <button wire:click="$set('statusFilter', '')"
                         class="px-2.5 py-1 rounded-lg font-bold transition {{ $statusFilter === '' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
@@ -61,13 +69,13 @@
                     <div
                         class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4">
                         <div class="space-y-3">
-                            <div class="flex justify-between items-start">
+                            <div class="flex justify-between items-start gap-2">
                                 <div>
                                     <h3 class="font-bold text-gray-900 text-base">{{ $l->nama_lapak }}</h3>
                                     <p class="text-xs text-gray-500 mt-0.5">📍
-                                        {{ $l->lokasi ?? 'Lokasi alamat belum diatur' }}</p>
+                                        {{ $l->lokasi ?: 'Lokasi alamat belum diatur' }}</p>
                                 </div>
-                                <div>
+                                <div class="shrink-0">
                                     @if ($l->status === 'aktif')
                                         <span
                                             class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-extrabold rounded-full text-[10px]">Aktif</span>
@@ -82,11 +90,15 @@
                             </div>
 
                             <!-- Daftar Staf Sales Terhubung -->
-                            <div class="p-3 bg-gray-50 rounded-xl space-y-1 text-xs">
-                                <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Tim
-                                    Sales Ditautkan:</span>
+                            <div class="p-3 bg-gray-50 rounded-xl space-y-1.5 text-xs border border-gray-100">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Tim Sales
+                                        Ditautkan:</span>
+                                    <span class="text-[10px] font-bold text-gray-500">{{ $l->users->count() }}
+                                        orang</span>
+                                </div>
                                 @if ($l->users->isNotEmpty())
-                                    <div class="flex flex-wrap gap-1">
+                                    <div class="flex flex-wrap gap-1.5 pt-0.5">
                                         @foreach ($l->users as $userSales)
                                             <span
                                                 class="px-2 py-0.5 bg-white border border-gray-200 text-gray-700 rounded-md text-[11px] font-semibold">
@@ -100,9 +112,9 @@
                             </div>
                         </div>
 
-                        <!-- Quick Action & Edit Button -->
-                        <div class="pt-3 border-t border-gray-100 flex justify-between items-center text-xs">
-                            <!-- Quick Status Toggle -->
+                        <!-- Quick Action & Edit/Delete Buttons -->
+                        <div
+                            class="pt-3 border-t border-gray-100 flex flex-wrap justify-between items-center gap-2 text-xs">
                             <div class="flex items-center gap-1">
                                 @if ($l->status !== 'aktif')
                                     <button wire:click="toggleQuickStatus({{ $l->id }}, 'aktif')"
@@ -124,10 +136,17 @@
                                 @endif
                             </div>
 
-                            <button wire:click="editLapak({{ $l->id }})"
-                                class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg text-[11px] transition">
-                                Edit Lapak
-                            </button>
+                            <div class="flex items-center gap-1.5">
+                                <button wire:click="editLapak({{ $l->id }})"
+                                    class="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg text-[11px] transition">
+                                    Edit & Tim
+                                </button>
+                                <button wire:click="hapusLapak({{ $l->id }})"
+                                    wire:confirm="Yakin ingin menghapus armada '{{ $l->nama_lapak }}'?"
+                                    class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold rounded-lg text-[11px] transition">
+                                    Hapus
+                                </button>
+                            </div>
                         </div>
                     </div>
                 @empty
@@ -138,20 +157,20 @@
                 @endforelse
             </div>
 
-            <!-- MODAL FORM LAPAK -->
+            <!-- MODAL FORM LAPAK & PENAUTAN SALES -->
             @if ($showModalLapak)
                 <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div
-                        class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 animate-in fade-in zoom-in duration-150 text-xs">
+                        class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-150 text-xs">
                         <div class="flex justify-between items-center border-b border-gray-100 pb-2">
                             <h3 class="text-base font-bold text-gray-800">
-                                {{ $lapak_id ? 'Edit Data Lapak' : 'Tambah Armada Lapak Baru' }}
+                                {{ $lapak_id ? 'Edit Lapak & Penautan Sales' : 'Tambah Armada Lapak Baru' }}
                             </h3>
                             <button wire:click="$set('showModalLapak', false)"
                                 class="text-gray-400 hover:text-gray-600 font-bold text-lg">&times;</button>
                         </div>
 
-                        <form wire:submit.prevent="simpanLapak" class="space-y-3">
+                        <form wire:submit.prevent="simpanLapak" class="space-y-3.5">
                             <div>
                                 <label class="block font-bold text-gray-700 mb-1">Nama Lapak / Cabang:</label>
                                 <input type="text" wire:model="nama_lapak"
@@ -165,7 +184,7 @@
 
                             <div>
                                 <label class="block font-bold text-gray-700 mb-1">Lokasi / Alamat Lengkap:</label>
-                                <textarea wire:model="lokasi" rows="3" placeholder="Masukkan alamat ringkas atau patokan posisi jualan..."
+                                <textarea wire:model="lokasi" rows="2" placeholder="Masukkan alamat ringkas atau patokan posisi jualan..."
                                     class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white"></textarea>
                                 @error('lokasi')
                                     <span
@@ -176,7 +195,7 @@
                             <div>
                                 <label class="block font-bold text-gray-700 mb-1">Status Operasional:</label>
                                 <select wire:model="status"
-                                    class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white font-semibold text-gray-800">
+                                    class="w-full pl-3 pr-8 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white font-semibold text-gray-800">
                                     <option value="aktif">Aktif</option>
                                     <option value="libur">Libur</option>
                                     <option value="perbaikan">Dalam Perbaikan</option>
@@ -185,6 +204,46 @@
                                     <span
                                         class="text-rose-500 text-[11px] block mt-0.5 font-semibold">{{ $message }}</span>
                                 @enderror
+                            </div>
+
+                            <!-- Penautan Staf Sales Langsung dari Modal Lapak -->
+                            <div class="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <label class="font-bold text-gray-700">Pilih Tim Sales / Barista Bertugas:</label>
+                                    <span class="text-[10px] font-bold text-amber-700">{{ count($selectedSales) }}
+                                        dipilih</span>
+                                </div>
+                                <div class="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                                    @forelse ($salesUsers as $su)
+                                        <label
+                                            class="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-100 cursor-pointer hover:border-amber-300 transition">
+                                            <div class="flex items-center gap-2">
+                                                <input type="checkbox" value="{{ $su->id }}"
+                                                    wire:model="selectedSales"
+                                                    class="rounded border-gray-300 text-amber-600 focus:ring-amber-500">
+                                                <div>
+                                                    <span
+                                                        class="font-bold text-gray-800 block">{{ $su->name }}</span>
+                                                    <span
+                                                        class="text-[10px] text-gray-400 block">{{ $su->email }}</span>
+                                                </div>
+                                            </div>
+                                            @if ($su->lapak && (int) $su->lapak_id !== (int) $lapak_id)
+                                                <span
+                                                    class="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-semibold">
+                                                    Di: {{ $su->lapak->nama_lapak }}
+                                                </span>
+                                            @endif
+                                        </label>
+                                    @empty
+                                        <p class="text-[11px] text-gray-400 italic py-2">Belum ada akun dengan role
+                                            Sales terdaftar.</p>
+                                    @endforelse
+                                </div>
+                                <p class="text-[10px] text-gray-400">
+                                    💡 Mencentang sales yang sedang bertugas di cabang lain akan otomatis memindahkannya
+                                    ke lapak ini.
+                                </p>
                             </div>
 
                             <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">

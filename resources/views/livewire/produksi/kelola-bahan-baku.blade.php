@@ -35,37 +35,41 @@
 
             <!-- Cards Summary Ringkasan Stok -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="p-4 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                <div wire:click="filterStokTab('semua')"
+                    class="p-4 bg-white rounded-xl shadow-sm border {{ $filter_stok === 'semua' ? 'border-amber-400 ring-2 ring-amber-100' : 'border-gray-100' }} cursor-pointer hover:bg-gray-50 transition flex items-center justify-between">
                     <div>
                         <span class="text-gray-400 text-[11px] font-semibold block uppercase">Total Varian Bahan</span>
                         <span class="text-xl font-black text-gray-800">{{ $totalBahan }} Jenis</span>
                     </div>
                     <div
-                        class="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center text-gray-600 font-bold text-xs">
-                        📦</div>
+                        class="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center text-gray-600 font-bold text-xs shrink-0">
+                        📦
+                    </div>
                 </div>
 
-                <div wire:click="filterStokTab('semua')"
-                    class="p-4 bg-white rounded-xl shadow-sm border border-emerald-100 cursor-pointer hover:bg-emerald-50/30 transition flex items-center justify-between">
+                <div wire:click="filterStokTab('aman')"
+                    class="p-4 bg-white rounded-xl shadow-sm border {{ $filter_stok === 'aman' ? 'border-emerald-400 ring-2 ring-emerald-100' : 'border-emerald-100' }} cursor-pointer hover:bg-emerald-50/30 transition flex items-center justify-between">
                     <div>
                         <span class="text-emerald-600 text-[11px] font-semibold block uppercase">Stok Status Aman</span>
                         <span class="text-xl font-black text-emerald-700">{{ $countAman }} Jenis</span>
                     </div>
                     <div
-                        class="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-700 font-bold text-xs">
-                        ✓</div>
+                        class="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-700 font-bold text-xs shrink-0">
+                        ✓
+                    </div>
                 </div>
 
                 <div wire:click="filterStokTab('menipis')"
-                    class="p-4 bg-white rounded-xl shadow-sm border border-amber-100 cursor-pointer hover:bg-amber-50/30 transition flex items-center justify-between">
+                    class="p-4 bg-white rounded-xl shadow-sm border {{ $filter_stok === 'menipis' ? 'border-amber-400 ring-2 ring-amber-100' : 'border-amber-100' }} cursor-pointer hover:bg-amber-50/30 transition flex items-center justify-between">
                     <div>
                         <span class="text-amber-600 text-[11px] font-semibold block uppercase">Stok Menipis / Perlu
                             Restok</span>
                         <span class="text-xl font-black text-amber-700">{{ $countMenipis }} Jenis</span>
                     </div>
                     <div
-                        class="w-9 h-9 bg-amber-100 rounded-lg flex items-center justify-center text-amber-700 font-bold text-xs">
-                        ⚠️</div>
+                        class="w-9 h-9 bg-amber-100 rounded-lg flex items-center justify-center text-amber-700 font-bold text-xs shrink-0">
+                        ⚠️
+                    </div>
                 </div>
             </div>
 
@@ -82,17 +86,21 @@
                     @endif
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <button wire:click="filterStokTab('semua')"
                         class="px-3 py-1.5 rounded-lg font-bold transition {{ $filter_stok === 'semua' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
-                        Semua Bahan ({{ $totalBahan }})
+                        Semua ({{ $totalBahan }})
+                    </button>
+                    <button wire:click="filterStokTab('aman')"
+                        class="px-3 py-1.5 rounded-lg font-bold transition {{ $filter_stok === 'aman' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                        Aman ({{ $countAman }})
                     </button>
                     <button wire:click="filterStokTab('menipis')"
                         class="px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 {{ $filter_stok === 'menipis' ? 'bg-rose-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
                         <span>Stok Menipis</span>
                         @if ($countMenipis > 0)
                             <span
-                                class="px-1.5 py-0.2 bg-rose-800 text-rose-100 rounded-full text-[10px]">{{ $countMenipis }}</span>
+                                class="px-1.5 py-0.5 bg-rose-800 text-rose-100 rounded-full text-[10px]">{{ $countMenipis }}</span>
                         @endif
                     </button>
                 </div>
@@ -118,29 +126,40 @@
                             @forelse ($bahanBakus as $bahan)
                                 @php
                                     $isMenipis = $bahan->stok_sekarang <= $bahan->stok_minimum;
+                                    $decStok = $bahan->stok_sekarang == floor($bahan->stok_sekarang) ? 0 : 2;
+                                    $decMin = $bahan->stok_minimum == floor($bahan->stok_minimum) ? 0 : 2;
                                 @endphp
                                 <tr class="hover:bg-gray-50/50">
                                     <td class="py-3 px-4 font-bold text-gray-900 whitespace-nowrap">
-                                        {{ $bahan->nama_bahan }}</td>
+                                        {{ $bahan->nama_bahan }}
+                                    </td>
                                     <td class="py-3 px-4 whitespace-nowrap">
                                         <span
-                                            class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md text-[10px] font-semibold">{{ $bahan->kategori }}</span>
+                                            class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md text-[10px] font-semibold">
+                                            {{ $bahan->kategori ?: 'Umum' }}
+                                        </span>
                                     </td>
                                     <td
                                         class="py-3 px-4 font-black whitespace-nowrap {{ $isMenipis ? 'text-rose-600' : 'text-gray-800' }}">
-                                        {{ number_format($bahan->stok_sekarang, 2, ',', '.') }} {{ $bahan->satuan }}
+                                        {{ number_format($bahan->stok_sekarang, $decStok, ',', '.') }}
+                                        {{ $bahan->satuan }}
                                     </td>
                                     <td class="py-3 px-4 text-gray-500 whitespace-nowrap">
-                                        {{ number_format($bahan->stok_minimum, 2, ',', '.') }} {{ $bahan->satuan }}
+                                        {{ number_format($bahan->stok_minimum, $decMin, ',', '.') }}
+                                        {{ $bahan->satuan }}
                                     </td>
                                     <td class="py-3 px-4 font-semibold whitespace-nowrap">
                                         Rp {{ number_format($bahan->harga_satuan, 0, ',', '.') }} /
                                         {{ $bahan->satuan }}
                                     </td>
                                     <td class="py-3 px-4 whitespace-nowrap">
-                                        @if ($isMenipis)
+                                        @if ($bahan->stok_sekarang <= 0)
                                             <span
-                                                class="px-2.5 py-0.5 bg-rose-100 text-rose-800 font-bold rounded-full text-[10px] animate-pulse">Stok
+                                                class="px-2.5 py-0.5 bg-rose-100 text-rose-800 font-bold rounded-full text-[10px]">Stok
+                                                Habis</span>
+                                        @elseif ($isMenipis)
+                                            <span
+                                                class="px-2.5 py-0.5 bg-amber-100 text-amber-800 font-bold rounded-full text-[10px] animate-pulse">Stok
                                                 Menipis</span>
                                         @else
                                             <span
@@ -159,7 +178,7 @@
                                             </button>
                                             <button wire:click="hapusBahan({{ $bahan->id }})"
                                                 wire:confirm="Yakin ingin menghapus master bahan '{{ $bahan->nama_bahan }}'?"
-                                                class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold transition">
+                                                class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold transition">
                                                 Hapus
                                             </button>
                                         </div>
@@ -167,8 +186,9 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="py-8 text-center text-gray-400 italic">Belum ada data
-                                        bahan baku yang sesuai.</td>
+                                    <td colspan="7" class="py-8 text-center text-gray-400 italic">
+                                        Belum ada data bahan baku yang sesuai.
+                                    </td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -182,7 +202,8 @@
             <!-- Tab Log Riwayat Pemakaian & Belanja -->
             <div x-data="{ tabLog: 'pemakaian' }" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <!-- Header Tab Switcher -->
-                <div class="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <div
+                    class="p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50/50">
                     <div>
                         <h2 class="font-bold text-xs text-gray-800 uppercase">Catatan & Histori Log Stok Gudang</h2>
                         <p class="text-[11px] text-gray-400">Jejak audit masuk (belanja) dan keluar (pemakaian / waste)
@@ -221,15 +242,19 @@
                             @forelse ($logPemakaian as $log)
                                 <tr class="hover:bg-gray-50/50">
                                     <td class="py-3 px-4 text-gray-500 whitespace-nowrap">
-                                        {{ $log->created_at->format('d M Y, H:i') }}</td>
+                                        {{ $log->created_at->format('d M Y, H:i') }}
+                                    </td>
                                     <td class="py-3 px-4 font-bold text-gray-900 whitespace-nowrap">
-                                        {{ $log->bahanBaku->nama_bahan ?? '-' }}</td>
+                                        {{ $log->bahanBaku->nama_bahan ?? '-' }}
+                                    </td>
                                     <td class="py-3 px-4 font-black text-rose-600 whitespace-nowrap">
-                                        -{{ number_format($log->jumlah, 2, ',', '.') }} {{ $log->satuan }}
+                                        -{{ number_format($log->jumlah, $log->jumlah == floor($log->jumlah) ? 0 : 2, ',', '.') }}
+                                        {{ $log->satuan }}
                                     </td>
                                     <td class="py-3 px-4 text-gray-600">{{ $log->keterangan ?? '-' }}</td>
                                     <td class="py-3 px-4 font-semibold text-gray-800 whitespace-nowrap">
-                                        {{ $log->user->name ?? 'System' }}</td>
+                                        {{ $log->user->name ?? 'System' }}
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
@@ -242,7 +267,7 @@
                 </div>
 
                 <!-- Log Belanja Bahan Baku -->
-                <div x-show="tabLog === 'belanja'" class="overflow-x-auto text-xs" x-cloak>
+                <div x-show="tabLog === 'belanja'" class="overflow-x-auto text-xs" style="display: none;">
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr
@@ -259,18 +284,22 @@
                             @forelse ($logBelanja as $log)
                                 <tr class="hover:bg-gray-50/50">
                                     <td class="py-3 px-4 text-gray-500 whitespace-nowrap">
-                                        {{ $log->created_at->format('d M Y, H:i') }}</td>
+                                        {{ $log->created_at->format('d M Y, H:i') }}
+                                    </td>
                                     <td class="py-3 px-4 font-bold text-gray-900 whitespace-nowrap">
-                                        {{ $log->bahanBaku->nama_bahan ?? '-' }}</td>
+                                        {{ $log->bahanBaku->nama_bahan ?? '-' }}
+                                    </td>
                                     <td class="py-3 px-4 font-black text-emerald-600 whitespace-nowrap">
-                                        +{{ number_format($log->jumlah, 2, ',', '.') }} {{ $log->satuan }}
+                                        +{{ number_format($log->jumlah, $log->jumlah == floor($log->jumlah) ? 0 : 2, ',', '.') }}
+                                        {{ $log->satuan }}
                                     </td>
                                     <td class="py-3 px-4 font-bold text-amber-600 whitespace-nowrap">
                                         Rp {{ number_format($log->total_biaya, 0, ',', '.') }}
                                     </td>
                                     <td class="py-3 px-4 text-gray-600">{{ $log->keterangan ?? '-' }}</td>
                                     <td class="py-3 px-4 font-semibold text-gray-800 whitespace-nowrap">
-                                        {{ $log->user->name ?? 'System' }}</td>
+                                        {{ $log->user->name ?? 'System' }}
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
@@ -288,9 +317,13 @@
                 <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div
                         class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 animate-in fade-in zoom-in duration-150">
-                        <h3 class="text-base font-bold text-gray-800 border-b border-gray-100 pb-2">
-                            {{ $bahan_id ? 'Edit Master Bahan Baku' : 'Tambah Bahan Baku Baru' }}
-                        </h3>
+                        <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                            <h3 class="text-base font-bold text-gray-800">
+                                {{ $bahan_id ? 'Edit Master Bahan Baku' : 'Tambah Bahan Baku Baru' }}
+                            </h3>
+                            <button wire:click="$set('showModalBahan', false)"
+                                class="text-gray-400 hover:text-gray-600 font-bold text-lg">&times;</button>
+                        </div>
 
                         <form wire:submit.prevent="simpanBahan" class="space-y-3 text-xs">
                             <div>
@@ -317,9 +350,12 @@
 
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block font-bold text-gray-700 mb-1">Stok Saat Ini:</label>
+                                    <label class="block font-bold text-gray-700 mb-1">
+                                        {{ $bahan_id ? 'Stok Saat Ini (Terkunci):' : 'Stok Awal:' }}
+                                    </label>
                                     <input type="number" step="0.01" wire:model="stok_sekarang"
-                                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white font-bold">
+                                        @if ($bahan_id) readonly title="Gunakan tombol Update Stok untuk mengubah jumlah stok" @endif
+                                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 {{ $bahan_id ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white' }} font-bold">
                                     @error('stok_sekarang')
                                         <span
                                             class="text-rose-500 text-[11px] block mt-0.5 font-semibold">{{ $message }}</span>
@@ -339,8 +375,16 @@
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block font-bold text-gray-700 mb-1">Satuan Takaran:</label>
-                                    <input type="text" wire:model="satuan" placeholder="Liter, Kg, Pcs, Pack"
-                                        class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white">
+                                    <select wire:model="satuan"
+                                        class="w-full pl-3 pr-8 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white font-semibold">
+                                        <option value="gram">gram</option>
+                                        <option value="kg">kg</option>
+                                        <option value="ml">ml</option>
+                                        <option value="liter">liter</option>
+                                        <option value="pcs">pcs</option>
+                                        <option value="set">set</option>
+                                        <option value="pack">pack</option>
+                                    </select>
                                     @error('satuan')
                                         <span
                                             class="text-rose-500 text-[11px] block mt-0.5 font-semibold">{{ $message }}</span>
@@ -349,7 +393,8 @@
                                 <div>
                                     <label class="block font-bold text-gray-700 mb-1">Harga Standard / Satuan
                                         (Rp):</label>
-                                    <input type="number" wire:model="harga_satuan" placeholder="18000"
+                                    <input type="number" step="any" wire:model="harga_satuan"
+                                        placeholder="18000"
                                         class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white font-bold">
                                     @error('harga_satuan')
                                         <span
@@ -378,21 +423,30 @@
                     <div
                         class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 animate-in fade-in zoom-in duration-150">
 
-                        <div class="border-b border-gray-100 pb-2">
-                            <span
-                                class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 block">Pencatatan
-                                Stok Gudang</span>
-                            <h3 class="text-base font-extrabold text-gray-800">{{ $selectedBahan->nama_bahan }}</h3>
-                            <p class="text-[11px] text-gray-500">Stok Saat Ini: <b
-                                    class="text-emerald-700 font-bold">{{ number_format($selectedBahan->stok_sekarang, 2, ',', '.') }}
-                                    {{ $selectedBahan->satuan }}</b></p>
+                        <div class="flex justify-between items-start border-b border-gray-100 pb-2">
+                            <div>
+                                <span
+                                    class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 block">Pencatatan
+                                    Stok Gudang</span>
+                                <h3 class="text-base font-extrabold text-gray-800">{{ $selectedBahan->nama_bahan }}
+                                </h3>
+                                <p class="text-[11px] text-gray-500">
+                                    Stok Saat Ini:
+                                    <b class="text-emerald-700 font-bold">
+                                        {{ number_format($selectedBahan->stok_sekarang, 2, ',', '.') }}
+                                        {{ $selectedBahan->satuan }}
+                                    </b>
+                                </p>
+                            </div>
+                            <button wire:click="$set('showModalStok', false)"
+                                class="text-gray-400 hover:text-gray-600 font-bold text-lg">&times;</button>
                         </div>
 
                         <form wire:submit.prevent="updateStok" class="space-y-3 text-xs">
                             <div>
                                 <label class="block font-bold text-gray-700 mb-1">Jenis Pencatatan Transaksi:</label>
                                 <select wire:model.live="jenis_penyesuaian"
-                                    class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white font-bold text-gray-800">
+                                    class="w-full pl-3.5 pr-9 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white font-bold text-gray-800">
                                     <option value="belanja">+ Belanja Bahan Baru (Stok Masuk / Restok)</option>
                                     <option value="pemakaian">- Pemakaian Produksi Manual (Stok Keluar)</option>
                                     <option value="rusak">- Rusak / Tumpah / Kadaluarsa (Waste)</option>
@@ -400,10 +454,10 @@
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
+                                <div class="{{ $jenis_penyesuaian !== 'belanja' ? 'sm:col-span-2' : '' }}">
                                     <label class="block font-bold text-gray-700 mb-1">Jumlah
                                         ({{ $selectedBahan->satuan }}):</label>
-                                    <input type="number" step="0.01" wire:model="jumlah_jumlah"
+                                    <input type="number" step="0.01" wire:model.live="jumlah_jumlah"
                                         placeholder="0.00"
                                         class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white font-black text-gray-900">
                                     @error('jumlah_jumlah')
@@ -416,7 +470,8 @@
                                     <div>
                                         <label class="block font-bold text-gray-700 mb-1">Harga Beli / Satuan
                                             (Rp):</label>
-                                        <input type="number" wire:model="harga_beli_satuan" placeholder="0"
+                                        <input type="number" step="any" wire:model.live="harga_beli_satuan"
+                                            placeholder="0"
                                             class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white font-bold text-emerald-700">
                                         @error('harga_beli_satuan')
                                             <span
@@ -430,13 +485,18 @@
                                 <div
                                     class="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex justify-between items-center font-bold text-[11px]">
                                     <span class="text-emerald-900">Estimasi Total Biaya Belanja:</span>
-                                    <span class="text-emerald-700 text-xs font-black">Rp
-                                        {{ number_format((float) $jumlah_jumlah * (float) $harga_beli_satuan, 0, ',', '.') }}</span>
+                                    <span class="text-emerald-700 text-xs font-black">
+                                        Rp
+                                        {{ number_format((float) $jumlah_jumlah * (float) $harga_beli_satuan, 0, ',', '.') }}
+                                    </span>
                                 </div>
                             @endif
 
                             <div>
-                                <label class="block font-bold text-gray-700 mb-1">Keterangan / Catatan:</label>
+                                <label class="block font-bold text-gray-700 mb-1">
+                                    Keterangan / Catatan
+                                    {{ $jenis_penyesuaian === 'rusak' ? '(Wajib Diisi)' : '(Opsional)' }}:
+                                </label>
                                 <input type="text" wire:model="keterangan"
                                     placeholder="{{ $jenis_penyesuaian === 'belanja' ? 'Misal: Belanja di Toko Supplier A' : ($jenis_penyesuaian === 'rusak' ? 'Misal: Kemasan bocor / basi' : 'Misal: Racik syrup botol') }}"
                                     class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white">

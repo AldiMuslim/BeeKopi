@@ -2,9 +2,11 @@
 
 namespace App\Livewire\Forms;
 
+use App\Models\AuditLog;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Validate;
@@ -24,7 +26,7 @@ class LoginForm extends Form
     /**
      * Attempt to authenticate the request's credentials.
      *
-     * @throws ValidationException
+     * @throws \Illuminate\Validation\ValidationException
      */
     public function authenticate(): void
     {
@@ -36,6 +38,37 @@ class LoginForm extends Form
             throw ValidationException::withMessages([
                 'form.email' => trans('auth.failed'),
             ]);
+        }
+
+        $user = Auth::user();
+
+        // 1. Blokir Login jika Status Akun Nonaktif
+        if (Schema::hasColumn('users', 'status') && ($user->status ?? 'aktif') === 'nonaktif') {
+            Auth::guard('web')->logout();
+
+            throw ValidationException::withMessages([
+                'form.email' => 'Akun Anda sedang dinonaktifkan oleh Administrator. Silakan hubungi Admin Bee Kopi.',
+            ]);
+        }
+
+        // 2. Catat Waktu Login Terakhir (last_login_at)
+        if (Schema::hasColumn('users', 'last_login_at')) {
+            $user->forceFill([
+                'last_login_at' => now(),
+            ])->save();
+        }
+
+        // 3. Catat Aktivitas Login ke Audit Log
+        if (Schema::hasTable('audit_logs')) {
+            $dataLog = [
+                'user_id'   => $user->id,
+                'aktivitas' => "Login Sistem: {$user->name} berhasil masuk ke aplikasi",
+            ];
+            if (Schema::hasColumn('audit_logs', 'keterangan')) {
+                $dataLog['aktivitas']  = 'Login Sistem';
+                $dataLog['keterangan'] = "Pengguna {$user->name} ({$user->email}) berhasil masuk ke sistem.";
+            }
+            AuditLog::create($dataLog);
         }
 
         RateLimiter::clear($this->throttleKey());
@@ -67,6 +100,6 @@ class LoginForm extends Form
      */
     protected function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->email).'|'.request()->ip());
+        return Str::transliterate(Str::lower($this->email) . '|' . request()->ip());
     }
 }

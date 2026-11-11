@@ -1,3 +1,133 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    /* Transisi halus saat berganti tema */
+    body,
+    div,
+    nav,
+    table,
+    tr,
+    td,
+    th,
+    input,
+    select,
+    textarea,
+    button {
+        transition:
+            background-color 0.15s ease,
+            border-color 0.15s ease,
+            color 0.15s ease;
+    }
+
+    /* Override otomatis latar belakang utama & kartu pada Mode Gelap */
+    html.dark body,
+    html.dark .bg-gray-50 {
+        background-color: #0f172a !important; /* slate-900 */
+        color: #f1f5f9;
+    }
+
+    html.dark .bg-white {
+        background-color: #1e293b !important; /* slate-800 */
+        color: #f1f5f9;
+    }
+
+    html.dark .bg-gray-50\/50,
+    html.dark .bg-gray-50\/60,
+    html.dark .bg-gray-50\/30,
+    html.dark .bg-gray-100 {
+        background-color: #334155 !important; /* slate-700 */
+    }
+
+    /* Override tipografi teks agar kontras & nyaman dibaca */
+    html.dark .text-gray-900,
+    html.dark .text-gray-800 {
+        color: #f8fafc !important; /* slate-50 */
+    }
+
+    html.dark .text-gray-700,
+    html.dark .text-gray-600 {
+        color: #cbd5e1 !important; /* slate-300 */
+    }
+
+    html.dark .text-gray-500,
+    html.dark .text-gray-400 {
+        color: #94a3b8 !important; /* slate-400 */
+    }
+
+    /* Override garis batas (Border & Divider Tabel) */
+    html.dark .border-gray-50,
+    html.dark .border-gray-100,
+    html.dark .border-gray-200,
+    html.dark .border-gray-300 {
+        border-color: #334155 !important; /* slate-700 */
+    }
+
+    html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+    html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+        border-color: #334155 !important;
+    }
+
+    /* Override Input Form, Select Dropdown & Textarea */
+    html.dark input:not([type="checkbox"]):not([type="radio"]),
+    html.dark select,
+    html.dark textarea {
+        background-color: #0f172a !important;
+        border-color: #475569 !important;
+        color: #f8fafc !important;
+    }
+
+    html.dark input::placeholder,
+    html.dark textarea::placeholder {
+        color: #64748b !important;
+    }
+
+    /* Penyesuaian Soft Badges & Alert Box di Mode Gelap */
+    html.dark .bg-amber-50,
+    html.dark .bg-amber-50\/50,
+    html.dark .bg-amber-50\/60,
+    html.dark .bg-amber-50\/70 {
+        background-color: rgba(217, 119, 6, 0.15) !important;
+        border-color: rgba(217, 119, 6, 0.35) !important;
+    }
+    html.dark .text-amber-800,
+    html.dark .text-amber-700 {
+        color: #fbbf24 !important;
+    }
+
+    html.dark .bg-emerald-50 {
+        background-color: rgba(16, 185, 129, 0.15) !important;
+        border-color: rgba(16, 185, 129, 0.35) !important;
+    }
+    html.dark .text-emerald-800,
+    html.dark .text-emerald-700 {
+        color: #34d399 !important;
+    }
+
+    html.dark .bg-rose-50,
+    html.dark .bg-rose-50\/30,
+    html.dark .bg-rose-50\/50 {
+        background-color: rgba(244, 63, 94, 0.15) !important;
+        border-color: rgba(244, 63, 94, 0.35) !important;
+    }
+    html.dark .text-rose-800,
+    html.dark .text-rose-700 {
+        color: #fb7185 !important;
+    }
+
+    html.dark .bg-blue-50 {
+        background-color: rgba(59, 130, 246, 0.15) !important;
+        border-color: rgba(59, 130, 246, 0.35) !important;
+    }
+    html.dark .text-blue-800,
+    html.dark .text-blue-700 {
+        color: #60a5fa !important;
+    }
+
+    html.dark .hover\:bg-gray-50:hover,
+    html.dark .hover\:bg-gray-50\/50:hover,
+    html.dark .hover\:bg-gray-50\/60:hover {
+        background-color: rgba(51, 65, 85, 0.5) !important;
+    }
+}

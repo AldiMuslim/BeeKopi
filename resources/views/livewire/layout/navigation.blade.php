@@ -1,10 +1,24 @@
-<nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
+<nav x-data="{
+    open: false,
+    dark: document.documentElement.classList.contains('dark'),
+    toggleTheme() {
+        if (window.toggleBeeKopiTheme) {
+            window.toggleBeeKopiTheme();
+        } else {
+            this.dark = !this.dark;
+            document.documentElement.classList.toggle('dark', this.dark);
+            localStorage.setItem('beekopi_theme', this.dark ? 'dark' : 'light');
+        }
+    }
+}" @theme-changed.window="dark = $event.detail.dark"
+    class="bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex">
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
-                    <a href="{{ route('dashboard') }}" class="font-extrabold text-lg text-amber-600 tracking-wider">
+                    <a href="{{ route('dashboard') }}"
+                        class="font-extrabold text-lg text-amber-600 dark:text-amber-500 tracking-wider">
                         BEE KOPI
                     </a>
                 </div>
@@ -28,15 +42,17 @@
                         </div>
 
                         <!-- Link Menu Penerimaan Stok -->
-                        <a href="{{ route('sales.penerimaan-stok') }}"
-                            class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition {{ request()->routeIs('sales.penerimaan-stok') ? 'bg-amber-600 text-white' : 'text-gray-600 hover:bg-amber-50 hover:text-amber-700' }}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4">
-                                </path>
-                            </svg>
-                            <span>Penerimaan Stok</span>
-                        </a>
+                        <div class="flex items-center">
+                            <a href="{{ route('sales.penerimaan-stok') }}"
+                                class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition {{ request()->routeIs('sales.penerimaan-stok') ? 'bg-amber-600 text-white' : 'text-gray-600 dark:text-slate-300 hover:bg-amber-50 hover:text-amber-700' }}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4">
+                                    </path>
+                                </svg>
+                                <span>Penerimaan Stok</span>
+                            </a>
+                        </div>
                     @endif
 
                     {{-- Menu Produksi / Gudang --}}
@@ -92,18 +108,37 @@
                 </div>
             </div>
 
-            <!-- Profile & Logout Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <!-- Toggle Tema & Profile Dropdown (Desktop) -->
+            <div class="hidden sm:flex sm:items-center sm:ms-6 gap-2.5">
+                <!-- Tombol Toggle Dark / Light Mode -->
+                <button type="button" @click="toggleTheme()"
+                    :title="dark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'"
+                    class="p-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-600 dark:text-amber-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition focus:outline-none">
+                    <!-- Ikon Matahari (Tampil saat Mode Gelap aktif) -->
+                    <svg x-show="dark" style="display: none;" class="w-4 h-4 text-amber-400" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <!-- Ikon Bulan (Tampil saat Mode Terang aktif) -->
+                    <svg x-show="!dark" class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>
+
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button
-                            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition">
-                            <div>
-                                <span class="font-bold text-gray-800">{{ Auth::user()->name }}</span>
+                            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-slate-300 bg-white dark:bg-slate-800 hover:text-gray-700 dark:hover:text-white focus:outline-none transition">
+                            <div class="text-right">
                                 <span
-                                    class="block text-[10px] text-amber-600 font-semibold uppercase">{{ Auth::user()->role?->label }}</span>
+                                    class="font-bold text-gray-800 dark:text-slate-100">{{ Auth::user()->name }}</span>
+                                <span
+                                    class="block text-[10px] text-amber-600 dark:text-amber-400 font-semibold uppercase">{{ Auth::user()->role?->label }}</span>
                             </div>
-                            <div class="ms-1">
+                            <div class="ms-1.5">
                                 <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
                                     viewBox="0 0 20 20">
                                     <path fill-rule="evenodd"
@@ -130,10 +165,25 @@
                 </x-dropdown>
             </div>
 
-            <!-- Hamburger Menu Mobile -->
-            <div class="-me-2 flex items-center sm:hidden">
+            <!-- Toggle Tema & Hamburger Menu (Mobile) -->
+            <div class="-me-2 flex items-center gap-2 sm:hidden">
+                <!-- Tombol Toggle Tema Mobile -->
+                <button type="button" @click="toggleTheme()"
+                    class="p-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-600 dark:text-amber-400 focus:outline-none transition">
+                    <svg x-show="dark" style="display: none;" class="w-5 h-5 text-amber-400" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <svg x-show="!dark" class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>
+
                 <button @click="open = ! open"
-                    class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none transition">
+                    class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700 focus:outline-none transition">
                     <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path :class="{ 'hidden': open, 'inline-flex': !open }" class="inline-flex"
                             stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -147,7 +197,8 @@
     </div>
 
     <!-- Responsive Navigation Menu Mobile -->
-    <div :class="{ 'block': open, 'hidden': !open }" class="hidden sm:hidden border-t border-gray-200">
+    <div :class="{ 'block': open, 'hidden': !open }"
+        class="hidden sm:hidden border-t border-gray-200 dark:border-slate-700">
         <div class="pt-2 pb-3 space-y-1">
             @php $role = Auth::user()->role?->nama; @endphp
 
@@ -180,12 +231,16 @@
             @endif
         </div>
 
-        <div class="pt-4 pb-1 border-t border-gray-200">
+        <div class="pt-4 pb-1 border-t border-gray-200 dark:border-slate-700">
             <div class="px-4">
-                <div class="font-bold text-base text-gray-800">{{ Auth::user()->name }}</div>
-                <div class="font-medium text-xs text-amber-600 uppercase">{{ Auth::user()->role?->label }}</div>
+                <div class="font-bold text-base text-gray-800 dark:text-slate-100">{{ Auth::user()->name }}</div>
+                <div class="font-medium text-xs text-amber-600 dark:text-amber-400 uppercase">
+                    {{ Auth::user()->role?->label }}</div>
             </div>
             <div class="mt-3 space-y-1">
+                <x-responsive-nav-link :href="route('profile.edit')">
+                    Profil Akun
+                </x-responsive-nav-link>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <x-responsive-nav-link :href="route('logout')"

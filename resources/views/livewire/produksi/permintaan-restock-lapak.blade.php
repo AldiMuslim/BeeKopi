@@ -1,4 +1,28 @@
 <div>
+    <!-- CSS Khusus Cetak Surat Jalan agar bersih di kertas -->
+    <style>
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+
+            #printableArea,
+            #printableArea * {
+                visibility: visible;
+            }
+
+            #printableArea {
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 20px;
+                background: #ffffff !important;
+                color: #000000 !important;
+            }
+        }
+    </style>
+
     <div class="p-4 sm:p-6 bg-gray-50 min-h-screen">
         <div class="max-w-7xl mx-auto space-y-6 w-full">
 
@@ -40,19 +64,29 @@
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-1">
                     <p class="text-[11px] text-gray-400 font-semibold uppercase">Total Stok Siap Jual</p>
-                    <p class="text-xl font-black text-amber-600">{{ number_format($totalStokPusat, 0, ',', '.') }} <span
-                            class="text-xs font-normal text-gray-500">cup</span></p>
+                    <p class="text-xl font-black text-amber-600">
+                        {{ number_format($totalStokPusat, 0, ',', '.') }} <span
+                            class="text-xs font-normal text-gray-500">cup</span>
+                    </p>
                 </div>
 
-                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-1">
+                <div wire:click="$set('onlyKritis', false)"
+                    class="bg-white p-4 rounded-xl border {{ !$onlyKritis ? 'border-gray-200' : 'border-gray-100' }} shadow-sm space-y-1 cursor-pointer hover:bg-gray-50 transition">
                     <p class="text-[11px] text-gray-400 font-semibold uppercase">Total Varian Menu</p>
-                    <p class="text-xl font-black text-gray-800">{{ $totalVarian }} <span
-                            class="text-xs font-normal text-gray-500">varian</span></p>
+                    <p class="text-xl font-black text-gray-800">
+                        {{ $totalVarian }} <span class="text-xs font-normal text-gray-500">varian</span>
+                    </p>
                 </div>
 
-                <div wire:click="$set('kategoriFilter', '')"
-                    class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-1 cursor-pointer hover:bg-rose-50/20 transition">
-                    <p class="text-[11px] text-gray-400 font-semibold uppercase">Perlu Diracik (&lt; 10 Cup)</p>
+                <div wire:click="toggleFilterKritis"
+                    class="bg-white p-4 rounded-xl border {{ $onlyKritis ? 'border-rose-400 ring-2 ring-rose-100' : 'border-gray-100' }} shadow-sm space-y-1 cursor-pointer hover:bg-rose-50/20 transition">
+                    <div class="flex justify-between items-center">
+                        <p class="text-[11px] text-gray-400 font-semibold uppercase">Perlu Diracik (&lt; 10 Cup)</p>
+                        @if ($onlyKritis)
+                            <span class="text-[9px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-bold">Filter
+                                Aktif</span>
+                        @endif
+                    </div>
                     <p class="text-xl font-black {{ $stokKritisCount > 0 ? 'text-rose-600' : 'text-emerald-600' }}">
                         {{ $stokKritisCount }} <span class="text-xs font-normal text-gray-500">menu</span>
                     </p>
@@ -60,8 +94,10 @@
 
                 <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-1">
                     <p class="text-[11px] text-gray-400 font-semibold uppercase">Distribusi Hari Ini</p>
-                    <p class="text-xl font-black text-blue-600">{{ number_format($distribusiHariIni, 0, ',', '.') }}
-                        <span class="text-xs font-normal text-gray-500">cup</span></p>
+                    <p class="text-xl font-black text-blue-600">
+                        {{ number_format($distribusiHariIni, 0, ',', '.') }} <span
+                            class="text-xs font-normal text-gray-500">cup</span>
+                    </p>
                 </div>
             </div>
 
@@ -77,7 +113,7 @@
                     </div>
 
                     <!-- Filter Kategori Varian -->
-                    <div class="flex items-center gap-1 text-xs">
+                    <div class="flex flex-wrap items-center gap-1 text-xs">
                         <span class="text-gray-400 font-medium mr-1">Kategori:</span>
                         <button wire:click="$set('kategoriFilter', '')"
                             class="px-2.5 py-1 rounded-lg font-bold transition {{ $kategoriFilter === '' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">Semua</button>
@@ -94,20 +130,21 @@
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 text-xs">
                     @forelse ($varians as $v)
                         <div
-                            class="p-3 bg-gray-50/80 rounded-xl border border-gray-100 flex flex-col justify-between space-y-2">
+                            class="p-3 bg-gray-50/80 rounded-xl border {{ $v->stok_pusat < 10 ? 'border-rose-200' : 'border-gray-100' }} flex flex-col justify-between space-y-2">
                             <div>
                                 <span
                                     class="text-[10px] text-gray-400 uppercase font-semibold block">{{ $v->kategori }}</span>
                                 <p class="font-bold text-gray-800 truncate" title="{{ $v->nama_produk }}">
-                                    {{ $v->nama_produk }}</p>
+                                    {{ $v->nama_produk }}
+                                </p>
                             </div>
 
                             <div class="space-y-2 pt-1 border-t border-gray-100">
                                 <div class="flex justify-between items-center">
                                     <span
                                         class="font-black text-sm {{ $v->stok_pusat < 10 ? 'text-rose-600' : 'text-amber-600' }}">
-                                        {{ number_format($v->stok_pusat, 0, ',', '.') }} <span
-                                            class="text-[10px] font-normal text-gray-500">cup</span>
+                                        {{ number_format($v->stok_pusat, 0, ',', '.') }}
+                                        <span class="text-[10px] font-normal text-gray-500">cup</span>
                                     </span>
                                     @if ($v->stok_pusat < 10)
                                         <span
@@ -118,15 +155,16 @@
                                     @endif
                                 </div>
 
-                                <a href="{{ route('produksi.racik-kopi') }}"
+                                <a href="{{ route('produksi.racik-kopi', ['produk_id' => $v->id]) }}"
                                     class="w-full block text-center py-1 bg-white hover:bg-amber-50 text-amber-700 border border-amber-200 font-bold rounded-lg text-[10px] transition">
                                     + Racik Batch
                                 </a>
                             </div>
                         </div>
                     @empty
-                        <div class="col-span-full py-6 text-center text-gray-400 italic">Tidak ada varian produk pada
-                            kategori ini.</div>
+                        <div class="col-span-full py-6 text-center text-gray-400 italic">
+                            Tidak ada varian produk pada kategori/filter ini.
+                        </div>
                     @endforelse
                 </div>
             </div>
@@ -136,30 +174,41 @@
                 <div
                     class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-3 items-center justify-between">
                     <!-- Workflow Tabs Gudang -->
-                    <div class="flex items-center gap-1.5 text-xs w-full sm:w-auto">
+                    <div class="flex flex-wrap items-center gap-1.5 text-xs w-full sm:w-auto">
                         <button wire:click="setTabFilter('semua')"
                             class="px-3 py-1.5 rounded-lg font-bold transition {{ $tabFilter === 'semua' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
                             Semua Riwayat
                         </button>
                         <button wire:click="setTabFilter('pending')"
-                            class="px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 {{ $tabFilter === 'pending' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                            class="px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 {{ $tabFilter === 'pending' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
                             <span>Perlu Disiapkan</span>
                             <span
-                                class="px-1.5 py-0.2 bg-amber-800 text-amber-100 rounded-full text-[10px]">Pending</span>
+                                class="px-1.5 py-0.5 {{ $tabFilter === 'pending' ? 'bg-amber-800 text-amber-100' : 'bg-amber-100 text-amber-800' }} rounded-full text-[10px]">
+                                {{ $countPending }}
+                            </span>
                         </button>
                         <button wire:click="setTabFilter('dalam_transit')"
-                            class="px-3 py-1.5 rounded-lg font-bold transition {{ $tabFilter === 'dalam_transit' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
-                            Dalam Transit
+                            class="px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 {{ $tabFilter === 'dalam_transit' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                            <span>Dalam Transit</span>
+                            <span
+                                class="px-1.5 py-0.5 {{ $tabFilter === 'dalam_transit' ? 'bg-blue-800 text-blue-100' : 'bg-blue-100 text-blue-800' }} rounded-full text-[10px]">
+                                {{ $countTransit }}
+                            </span>
                         </button>
                         <button wire:click="setTabFilter('selesai')"
-                            class="px-3 py-1.5 rounded-lg font-bold transition {{ $tabFilter === 'selesai' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
-                            Selesai
+                            class="px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 {{ $tabFilter === 'selesai' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                            <span>Selesai</span>
+                            <span
+                                class="px-1.5 py-0.5 {{ $tabFilter === 'selesai' ? 'bg-emerald-800 text-emerald-100' : 'bg-emerald-100 text-emerald-800' }} rounded-full text-[10px]">
+                                {{ $countSelesai }}
+                            </span>
                         </button>
                     </div>
 
                     <div class="flex items-center gap-2 w-full sm:w-auto">
-                        <input type="text" wire:model.live="search" placeholder="Cari Kode Distribusi / Lapak..."
-                            class="w-full sm:w-64 px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-amber-500">
+                        <input type="text" wire:model.live.debounce.300ms="search"
+                            placeholder="Cari Kode Distribusi / Lapak..."
+                            class="w-full sm:w-64 px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-amber-500 bg-white">
                     </div>
                 </div>
 
@@ -188,9 +237,11 @@
                                             {{ \Carbon\Carbon::parse($req->tanggal)->format('d M Y') }}
                                         </td>
                                         <td class="py-3.5 px-4 font-bold text-gray-900 whitespace-nowrap">
-                                            #{{ $req->kode_distribusi }}</td>
+                                            #{{ $req->kode_distribusi }}
+                                        </td>
                                         <td class="py-3.5 px-4 font-semibold text-gray-800 whitespace-nowrap">
-                                            {{ $req->lapak->nama_lapak ?? '-' }}</td>
+                                            {{ $req->lapak->nama_lapak ?? '-' }}
+                                        </td>
                                         <td class="py-3.5 px-4 whitespace-nowrap font-bold text-amber-600">
                                             {{ $req->details->sum(fn($d) => $d->jumlah_cup ?? ($d->jumlah ?? 0)) }} cup
                                         </td>
@@ -201,7 +252,8 @@
                                                     Lapak</span>
                                             @elseif ($req->status === 'ditolak')
                                                 <span
-                                                    class="px-2.5 py-1 bg-rose-100 text-rose-800 font-bold rounded-full text-[10px]">Ditolak</span>
+                                                    class="px-2.5 py-1 bg-rose-100 text-rose-800 font-bold rounded-full text-[10px]">Ditolak
+                                                    / Selisih</span>
                                             @elseif ($req->status === 'dalam_transit')
                                                 <span
                                                     class="px-2.5 py-1 bg-blue-100 text-blue-800 font-bold rounded-full text-[10px]">Dalam
@@ -227,8 +279,9 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="py-8 text-center text-gray-400 italic">Belum ada
-                                            data pengiriman stok yang sesuai.</td>
+                                        <td colspan="6" class="py-8 text-center text-gray-400 italic">
+                                            Belum ada data pengiriman stok yang sesuai.
+                                        </td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -247,10 +300,12 @@
                         class="bg-white rounded-2xl shadow-xl w-full max-w-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto text-xs animate-in fade-in zoom-in duration-150">
                         <div class="flex justify-between items-center border-b border-gray-100 pb-3">
                             <div>
-                                <h3 class="text-base font-bold text-gray-800">Verifikasi Pengiriman Stok
-                                    #{{ $selectedRequest->kode_distribusi }}</h3>
-                                <p class="text-gray-500 text-[11px]">Lapak Tujuan:
-                                    <b>{{ $selectedRequest->lapak->nama_lapak ?? '-' }}</b></p>
+                                <h3 class="text-base font-bold text-gray-800">
+                                    Verifikasi Pengiriman Stok #{{ $selectedRequest->kode_distribusi }}
+                                </h3>
+                                <p class="text-gray-500 text-[11px]">
+                                    Lapak Tujuan: <b>{{ $selectedRequest->lapak->nama_lapak ?? '-' }}</b>
+                                </p>
                             </div>
                             <button wire:click="$set('showModalDetail', false)"
                                 class="text-gray-400 hover:text-gray-600 font-bold text-lg">&times;</button>
@@ -258,9 +313,9 @@
 
                         <div class="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-xl text-[11px]">
                             <div>
-                                <span class="text-gray-400 block">Dibuat Oleh (Management):</span>
+                                <span class="text-gray-400 block">Petugas Terkait:</span>
                                 <span
-                                    class="font-bold text-gray-700">{{ $selectedRequest->pengirim->name ?? 'Management' }}</span>
+                                    class="font-bold text-gray-700">{{ $selectedRequest->pengirim->name ?? 'Management / Gudang' }}</span>
                             </div>
                             <div>
                                 <span class="text-gray-400 block">Tanggal Instruksi:</span>
@@ -288,17 +343,22 @@
                                         <div>
                                             <p class="font-bold text-gray-800">
                                                 {{ $detail->produk->nama_produk ?? 'Produk' }}</p>
-                                            <p class="text-[10px] text-gray-400">Stok Pusat Tersedia:
-                                                <b>{{ $stokPusatSekarang }} cup</b></p>
+                                            <p class="text-[10px] text-gray-400">
+                                                Stok Pusat Tersedia: <b>{{ $stokPusatSekarang }} cup</b>
+                                            </p>
                                         </div>
                                         <div class="text-right">
                                             <span class="font-black text-amber-600 text-sm block">{{ $qty }}
                                                 cup</span>
-                                            @if ($isReady)
-                                                <span class="text-[9px] text-emerald-600 font-bold">Stok Cukup ✓</span>
-                                            @else
-                                                <span class="text-[9px] text-rose-600 font-bold">Stok Defisit (Kurang
-                                                    {{ $qty - $stokPusatSekarang }} Cup)!</span>
+                                            @if ($selectedRequest->status === 'pending')
+                                                @if ($isReady)
+                                                    <span class="text-[9px] text-emerald-600 font-bold">Stok Cukup
+                                                        ✓</span>
+                                                @else
+                                                    <span class="text-[9px] text-rose-600 font-bold block">
+                                                        Stok Defisit (Kurang {{ $qty - $stokPusatSekarang }} Cup)!
+                                                    </span>
+                                                @endif
                                             @endif
                                         </div>
                                     </div>
@@ -308,13 +368,37 @@
 
                         @if ($selectedRequest->catatan)
                             <div class="p-3 bg-amber-50/50 border border-amber-100 rounded-xl text-gray-600">
-                                <span class="font-bold text-amber-800 block mb-0.5">Catatan Instruksi:</span>
+                                <span class="font-bold text-amber-800 block mb-0.5">Catatan Instruksi
+                                    Management:</span>
                                 <p>{{ $selectedRequest->catatan }}</p>
                             </div>
                         @endif
 
+                        @if ($selectedRequest->status === 'pending')
+                            <div>
+                                <label class="block font-bold text-gray-700 mb-1">Catatan Pengiriman Gudang / Kurir
+                                    (Opsional):</label>
+                                <input type="text" wire:model="catatan_gudang"
+                                    placeholder="Contoh: Dikirim via Kurir Ahmad / Box Pendingin #1"
+                                    class="w-full px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 bg-white">
+                            </div>
+                        @elseif ($selectedRequest->catatan_gudang)
+                            <div class="p-3 bg-blue-50/50 border border-blue-100 rounded-xl text-gray-600">
+                                <span class="font-bold text-blue-800 block mb-0.5">Catatan Pengiriman Gudang:</span>
+                                <p>{{ $selectedRequest->catatan_gudang }}</p>
+                            </div>
+                        @endif
+
+                        @if ($selectedRequest->catatan_sales)
+                            <div class="p-3 bg-emerald-50/50 border border-emerald-100 rounded-xl text-gray-600">
+                                <span class="font-bold text-emerald-800 block mb-0.5">Catatan Konfirmasi Sales
+                                    Lapak:</span>
+                                <p>{{ $selectedRequest->catatan_sales }}</p>
+                            </div>
+                        @endif
+
                         <!-- Action Buttons Gudang -->
-                        <div class="flex justify-between items-center pt-3 border-t border-gray-100">
+                        <div class="flex flex-wrap justify-between items-center gap-2 pt-3 border-t border-gray-100">
                             <button wire:click="openSuratJalan({{ $selectedRequest->id }})"
                                 class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition">
                                 📄 Cetak Surat Jalan
@@ -322,14 +406,17 @@
 
                             <div class="flex gap-2">
                                 <button type="button" wire:click="$set('showModalDetail', false)"
-                                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition">Tutup</button>
+                                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition">
+                                    Tutup
+                                </button>
 
                                 @if ($selectedRequest->status === 'pending')
                                     <button wire:click="konfirmasiSiapKirim({{ $selectedRequest->id }})"
                                         wire:loading.attr="disabled" @if (!$isAllStockReady) disabled @endif
-                                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl transition shadow-sm">
-                                        <span wire:loading.remove wire:target="konfirmasiSiapKirim">Konfirmasi Barang
-                                            Siap & Dispatch</span>
+                                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition shadow-sm">
+                                        <span wire:loading.remove wire:target="konfirmasiSiapKirim">
+                                            Konfirmasi Barang Siap & Dispatch
+                                        </span>
                                         <span wire:loading wire:target="konfirmasiSiapKirim">Memproses...</span>
                                     </button>
                                 @endif
@@ -356,6 +443,11 @@
 
                         <!-- Print Container -->
                         <div id="printableArea" class="space-y-4 text-xs text-gray-800">
+                            <div class="border-b-2 border-gray-800 pb-2 mb-2 hidden print:block">
+                                <h1 class="text-base font-black uppercase">BEE KOPI - SURAT JALAN DISTRIBUSI GUDANG
+                                    PUSAT</h1>
+                            </div>
+
                             <div class="grid grid-cols-2 gap-4 border-b border-gray-100 pb-3">
                                 <div>
                                     <p class="text-gray-400 text-[10px] uppercase font-bold">Kode Pengiriman:</p>
@@ -377,15 +469,19 @@
                             <table class="w-full text-left border-collapse border border-gray-200">
                                 <thead>
                                     <tr class="bg-gray-100 text-gray-700 font-bold uppercase text-[10px]">
-                                        <th class="p-2 border border-gray-200">No</th>
+                                        <th class="p-2 border border-gray-200 text-center w-10">No</th>
                                         <th class="p-2 border border-gray-200">Nama Varian Produk</th>
                                         <th class="p-2 border border-gray-200">Kategori</th>
                                         <th class="p-2 border border-gray-200 text-right">Jumlah (Cup)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    @php $grandTotalCup = 0; @endphp
                                     @foreach ($selectedRequest->details as $index => $detail)
-                                        @php $qty = $detail->jumlah_cup ?? ($detail->jumlah ?? 0); @endphp
+                                        @php
+                                            $qty = $detail->jumlah_cup ?? ($detail->jumlah ?? 0);
+                                            $grandTotalCup += $qty;
+                                        @endphp
                                         <tr>
                                             <td class="p-2 border border-gray-200 text-center">{{ $index + 1 }}
                                             </td>
@@ -397,23 +493,37 @@
                                                 {{ $qty }} cup</td>
                                         </tr>
                                     @endforeach
+                                    <tr class="bg-gray-50 font-black">
+                                        <td colspan="3" class="p-2 border border-gray-200 text-right uppercase">
+                                            Total Keseluruhan Muatan:</td>
+                                        <td class="p-2 border border-gray-200 text-right text-amber-700">
+                                            {{ $grandTotalCup }} cup</td>
+                                    </tr>
                                 </tbody>
                             </table>
+
+                            @if ($selectedRequest->catatan_gudang || $selectedRequest->catatan)
+                                <div class="p-2.5 border border-gray-200 rounded-lg text-[11px]">
+                                    <strong>Catatan:</strong>
+                                    {{ $selectedRequest->catatan_gudang ?? $selectedRequest->catatan }}
+                                </div>
+                            @endif
 
                             <!-- Signatures Field -->
                             <div class="grid grid-cols-3 gap-4 pt-8 text-center text-[11px]">
                                 <div>
-                                    <p class="text-gray-400 mb-10">Petugas Gudang,</p>
+                                    <p class="text-gray-400 mb-12">Petugas Gudang,</p>
                                     <p class="font-bold border-t border-gray-300 pt-1">{{ auth()->user()->name }}</p>
                                 </div>
                                 <div>
-                                    <p class="text-gray-400 mb-10">Kurir / Pengirim,</p>
+                                    <p class="text-gray-400 mb-12">Kurir / Pengirim,</p>
                                     <p class="font-bold border-t border-gray-300 pt-1">( ............................ )
                                     </p>
                                 </div>
                                 <div>
-                                    <p class="text-gray-400 mb-10">Penerima Lapak,</p>
-                                    <p class="font-bold border-t border-gray-300 pt-1">( ............................ )
+                                    <p class="text-gray-400 mb-12">Penerima Lapak,</p>
+                                    <p class="font-bold border-t border-gray-300 pt-1">
+                                        {{ $selectedRequest->penerima->name ?? '( ............................ )' }}
                                     </p>
                                 </div>
                             </div>
